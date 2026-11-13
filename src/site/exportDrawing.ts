@@ -1,7 +1,6 @@
 import { measureAnchor, measureLabel, type CadMeasure } from '../cad/cadMeasure';
 import type { CadDrawing } from '../cad/types';
 
-const escapeXml = (value: string) => value.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`);
 /** White CAD ink is unreadable on a white page. */
 const ink = (color: string) => (color.toLowerCase() === '#ffffff' ? '#000000' : color);
 
@@ -18,56 +17,7 @@ export function exportPng(canvas: HTMLCanvasElement, stem: string) {
   canvas.toBlob((blob) => blob && download(blob, `${stem}.png`), 'image/png');
 }
 
-/** The whole sheet as scalable vectors on a white page. */
 const MEASURE_INK = '#2459d8';
-
-function measureSvg(drawing: CadDrawing, measures: CadMeasure[], stroke: number) {
-  const size = Math.max(drawing.extents[2] - drawing.extents[0], drawing.extents[3] - drawing.extents[1]) / 70;
-  return measures
-    .map((measure) => {
-      if (measure.points.length === 0) return '';
-      const d = measure.points.map(([x, y], index) => `${index ? 'L' : 'M'}${x} ${-y}`).join('');
-      const closed = measure.mode === 'area' && measure.points.length > 2;
-      const anchor = measureAnchor(measure);
-      const label = measureLabel(measure, drawing);
-      const caption =
-        label && anchor
-          ? `<text x="${anchor[0]}" y="${-anchor[1]}" font-size="${size}" text-anchor="middle" fill="${MEASURE_INK}">${escapeXml(label)}</text>`
-          : '';
-      return `<path d="${d}${closed ? 'Z' : ''}" fill="${closed ? '#2459d822' : 'none'}" stroke="${MEASURE_INK}" stroke-width="${stroke * 2}"/>${caption}`;
-    })
-    .join('');
-}
-
-export function exportSvg(drawing: CadDrawing, stem: string, measures: CadMeasure[] = []) {
-  const [minX, minY, maxX, maxY] = drawing.extents;
-  const stroke = Math.max(maxX - minX, maxY - minY) / 2500;
-  const byColor = new Map<number, { stroke: string[]; fill: string[] }>();
-  for (const entity of drawing.entities) {
-    if (!drawing.layers[entity.l]?.visible) continue;
-    let group = byColor.get(entity.c);
-    if (!group) byColor.set(entity.c, (group = { stroke: [], fill: [] }));
-    let d = '';
-    for (let i = 0; i < entity.p.length; i += 2) d += `${i ? 'L' : 'M'}${entity.p[i]} ${-entity.p[i + 1]!}`;
-    (entity.fill ? group.fill : group.stroke).push(entity.closed || entity.fill ? `${d}Z` : d);
-  }
-  const paths = [...byColor].map(([c, group]) => {
-    const color = ink(drawing.colors[c] ?? '#000000');
-    return (
-      (group.stroke.length ? `<path d="${group.stroke.join('')}" fill="none" stroke="${color}"/>` : '') +
-      (group.fill.length ? `<path d="${group.fill.join('')}" fill="${color}" stroke="none"/>` : '')
-    );
-  });
-  const texts = drawing.texts
-    .filter((text) => drawing.layers[text.l]?.visible)
-    .map((text) => {
-      const anchor = { left: 'start', center: 'middle', right: 'end' }[text.ha];
-      const baseline = { top: 'hanging', middle: 'central', bottom: 'text-after-edge', baseline: 'alphabetic' }[text.va];
-      return `<text transform="translate(${text.x} ${-text.y}) rotate(${-text.r})" font-size="${text.h}" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="${ink(drawing.colors[text.c] ?? '#000000')}">${escapeXml(text.s)}</text>`;
-    });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${-maxY} ${maxX - minX} ${maxY - minY}" stroke-width="${stroke}" stroke-linejoin="round" font-family="Arial, sans-serif"><rect x="${minX}" y="${-maxY}" width="${maxX - minX}" height="${maxY - minY}" fill="#ffffff"/>${paths.join('')}${texts.join('')}${measureSvg(drawing, measures, stroke)}</svg>`;
-  download(new Blob([svg], { type: 'image/svg+xml' }), `${stem}.svg`);
-}
 
 const PDF_PAGE = [1190.55, 841.89] as const; // A3 in points
 const PDF_MARGIN = 28;

@@ -43,14 +43,14 @@ test('measurements stay on the sheet and in the export', async ({ page }) => {
 
   const downloadPromise = page.waitForEvent('download');
   await page.locator('header').getByRole('button', { name: /Export|^$/ }).filter({ has: page.locator('svg.lucide-download') }).click();
-  await page.getByRole('menuitem', { name: /SVG/ }).click();
+  await page.getByRole('menuitem', { name: /PNG/ }).click();
   const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('studio-apartment.png');
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   if (stream) {
     for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   }
-  const text = Buffer.concat(chunks).toString('utf8');
-  expect(text).toContain('stroke="#2459d8"');
-  expect(text).toContain('fill="#2459d8"');
+  const bytes = Buffer.concat(chunks);
+  expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
 });

@@ -1,5 +1,6 @@
 export const THEME_STORAGE_KEY = 'kodifly-theme';
 export const TRIAL_URL = 'https://www.spatialsense.app/free-trial';
+export const WORKSPACE_LOGIN_URL = 'https://workspace.spatialsense.app/auth/login';
 
 export const FAQ = [
   {
@@ -60,7 +61,7 @@ export const SEO_PAGES: Record<string, { metaTitle: string; description: string;
     hero: {
       title: 'Free online',
       highlight: 'DXF viewer',
-      lede: 'Drop a DXF file to see it in seconds. Switch layers, measure distances and areas, and export to PDF, SVG or PNG. The file stays on your device.',
+      lede: 'Drop a DXF file to see it in seconds. Switch layers, measure distances and areas, and export to PDF or PNG. The file stays on your device.',
     },
   },
   'open-dwg-without-autocad': {

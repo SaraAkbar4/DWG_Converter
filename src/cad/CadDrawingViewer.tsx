@@ -38,11 +38,13 @@ type Props = {
   railOpen: boolean;
   onRailClose: () => void;
   onTool: (tool: CadTool) => void;
+  /** Returns false once the free tool uses are spent, and the action must not run. */
+  onToolUsed: () => boolean;
   onMeasureMode: (mode: CadMeasureMode) => void;
   onMarks: (marks: SheetMarks | ((current: SheetMarks) => SheetMarks)) => void;
 };
 
-export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onMeasureMode, onMarks }: Props) {
+export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onToolUsed, onMeasureMode, onMarks }: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
@@ -95,13 +97,20 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     measures: marks.saved,
     draft: marks.draft,
     onDraft: (draft) => onMarks((current) => ({ saved: current.saved, draft })),
-    onCommit: (measure) => onMarks((current) => ({ saved: [...current.saved, measure], draft: [] })),
+    onCommit: (measure) => {
+      onMarks((current) => ({ saved: [...current.saved, measure], draft: [] }));
+    },
+    onStopMeasure: () => {
+      onMarks((current) => ({ saved: current.saved, draft: [] }));
+      onTool('select');
+    },
     onSelect: setSelection,
   });
 
   const togglePanel = (next: Exclude<CadPanel, null>) =>
     setPanel((current) => {
       if (current === next) return null;
+      if (!onToolUsed()) return current;
       if (window.matchMedia(SINGLE_SIDEBAR).matches) onRailClose();
       return next;
     });
@@ -114,6 +123,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
       ? { saved: [...marks.saved, { mode: 'area', points: marks.draft }], draft: [] }
       : { saved: marks.saved, draft: [] };
   const startMeasure = (mode: CadMeasureMode) => {
+    if (!onToolUsed()) return;
     onMarks(keepDraft(measureMode));
     onMeasureMode(mode);
     onTool('measure');
@@ -174,6 +184,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     <div
       className={styles.root}
       data-viewer-side-panel={panel ? 'right' : undefined}
+      data-rail-open={railOpen ? 'true' : undefined}
       style={{
         background: paper.background,
         ['--viewer-side-panel-width' as string]: panel ? '340px' : '0px',
@@ -195,6 +206,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         tool={tool}
         selectMode={selectMode}
         onSelectMode={(mode) => {
+          if (!onToolUsed()) return;
           setSelectMode(mode);
           onTool('select');
           onMarks(keepDraft(measureMode));

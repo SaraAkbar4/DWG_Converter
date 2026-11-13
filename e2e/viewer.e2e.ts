@@ -38,8 +38,8 @@ test('open the sample, use the tools, and export', async ({ page }) => {
 
   await page.locator('header').getByRole('button', { name: /Export|^$/ }).filter({ has: page.locator('svg.lucide-download') }).click();
   const download = page.waitForEvent('download');
-  await page.getByRole('menuitem', { name: /SVG/ }).click();
-  expect((await download).suggestedFilename()).toBe('studio-apartment.svg');
+  await page.getByRole('menuitem', { name: /PNG/ }).click();
+  expect((await download).suggestedFilename()).toBe('studio-apartment.png');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 

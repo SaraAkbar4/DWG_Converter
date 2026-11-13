@@ -1,16 +1,17 @@
 import { Alert, Button, Dropdown, Tooltip } from 'antd';
-import { ChevronDown, ChevronLeft, ChevronRight, Download, Maximize, MessageCircle, Moon, Plus, Sun } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Maximize, MessageCircle, Moon, Plus, Sun, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import type { CadCommand } from '../cad/CadCommandPalette';
 import { CadDrawingViewer } from '../cad/CadDrawingViewer';
-import { measureLabel, type CadMeasure, type CadPoint } from '../cad/cadMeasure';
+import type { CadMeasure, CadPoint } from '../cad/cadMeasure';
 import type { CadMeasureMode, CadTool } from '../cad/useCadCanvas';
 import type { ViewerTheme } from '../cad/platform';
 import type { DrawingDoc, DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
-import { TRIAL_URL } from './content';
-import { exportPdf, exportPng, exportSvg } from './exportDrawing';
+import { TRIAL_URL, WORKSPACE_LOGIN_URL } from './content';
+import { exportPng } from './exportDrawing';
 import styles from './site.module.css';
+import { openDrawingPicker } from './pickDrawing';
 import { track } from './track';
 
 type Props = {
@@ -24,16 +25,25 @@ type Props = {
   onClose: () => void;
 };
 
-type ExportKind = 'png' | 'svg' | 'pdf';
+type ExportKind = 'png' | 'pdf';
 const EXPORTS: Array<{ key: ExportKind; label: string }> = [
   { key: 'png', label: 'PNG image (current view)' },
-  { key: 'svg', label: 'SVG vectors (whole sheet)' },
   { key: 'pdf', label: 'PDF (whole sheet, A3)' },
 ];
 const icon = { size: 16, strokeWidth: 1.75 } as const;
 const EMPTY_MARKS = { saved: [] as CadMeasure[], draft: [] as CadPoint[] };
 type SheetMarks = { saved: CadMeasure[]; draft: CadPoint[] };
 const formatSize = (bytes: number) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
+/** Five toolbar uses are free. The next one is refused and the signup box stays in the way. */
+const TOOL_GATE = 5;
+const FREE_PNG_EXPORTS = 3;
+const PNG_EXPORT_KEY = 'kodifly-png-exports';
+const pngExportsUsed = () => {
+  if (typeof window === 'undefined') return 0;
+  const value = Number(sessionStorage.getItem(PNG_EXPORT_KEY));
+  return Number.isFinite(value) ? value : 0;
+};
+type SignupReason = 'tools' | 'export';
 
 export function ViewerScreen(props: Props) {
   const { docs, loading, error, theme, onFiles } = props;
@@ -68,9 +78,10 @@ export function ViewerScreen(props: Props) {
   const toggleFullscreen = () =>
     document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
   const closeDoc = () => props.onClose();
-  const pickFiles = () => inputRef.current?.click();
+  const pickFiles = () => openDrawingPicker(inputRef.current);
   const [glimpse, setGlimpse] = useState(true);
-  const [leftOpen, setLeftOpen] = useState(true);
+  // Phones start with the drawings sheet closed so the drawing and toolbar are visible first.
+  const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia('(max-width: 768px)').matches);
   const leftClosedByUser = useRef(false);
   const railRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -92,6 +103,21 @@ export function ViewerScreen(props: Props) {
       leftClosedByUser.current = !next;
       return next;
     });
+  const [signup, setSignup] = useState<SignupReason | null>(null);
+  const toolUses = useRef(0);
+  const toolsLocked = useRef(false);
+  const noteToolUse = () => {
+    if (toolsLocked.current) {
+      setSignup('tools');
+      return false;
+    }
+    toolUses.current += 1;
+    if (toolUses.current >= TOOL_GATE) {
+      toolsLocked.current = true;
+      setSignup('tools');
+    }
+    return true;
+  };
   const [tool, setTool] = useState<CadTool>('select');
   const [measureMode, setMeasureMode] = useState<CadMeasureMode>('distance');
   const [marksBySheet, setMarksBySheet] = useState<Record<string, SheetMarks>>({});
@@ -102,18 +128,21 @@ export function ViewerScreen(props: Props) {
       const prev = current[sheetKey] ?? EMPTY_MARKS;
       return { ...current, [sheetKey]: typeof next === 'function' ? next(prev) : next };
     });
-  const exportMarks = [
-    ...marks.saved,
-    ...(measureLabel({ mode: measureMode, points: marks.draft }, sheet.drawing)
-      ? [{ mode: measureMode, points: marks.draft }]
-      : []),
-  ];
   const runExport = (kind: ExportKind) => {
     track('export_clicked', { kind });
+    if (kind === 'pdf') {
+      setSignup('export');
+      return;
+    }
     const canvas = stageRef.current?.querySelector('canvas');
-    if (kind === 'svg') exportSvg(sheet.drawing, stem, exportMarks);
-    else if (kind === 'pdf') exportPdf(sheet.drawing, stem, exportMarks);
-    else if (canvas) exportPng(canvas, stem);
+    if (!canvas) return;
+    const used = pngExportsUsed();
+    if (used >= FREE_PNG_EXPORTS) {
+      setSignup('export');
+      return;
+    }
+    sessionStorage.setItem(PNG_EXPORT_KEY, String(used + 1));
+    exportPng(canvas, stem);
   };
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -189,7 +218,7 @@ export function ViewerScreen(props: Props) {
       <motion.div
         ref={stageRef}
         layoutId="stage"
-        className={`${styles.viewerStage} ph-no-capture`}
+        className={styles.viewerStage}
         data-glimpse={glimpse}
         data-left-rail={leftOpen ? 'open' : 'closed'}
         transition={{ type: 'spring', bounce: 0, duration: 0.45 }}
@@ -197,9 +226,14 @@ export function ViewerScreen(props: Props) {
         <aside ref={railRef} id="drawings-views" className={styles.leftRail} aria-label="Drawings and views" aria-hidden={!leftOpen}>
           <div className={styles.leftRailHeader}>
             <span>Drawings</span>
-            <button type="button" className={styles.leftRailAdd} onClick={pickFiles} aria-label="Open another drawing">
-              <Plus size={16} strokeWidth={1.75} />
-            </button>
+            <span className={styles.leftRailActions}>
+              <button type="button" className={styles.leftRailAdd} onClick={pickFiles} aria-label="Open another drawing">
+                <Plus size={16} strokeWidth={1.75} />
+              </button>
+              <button type="button" className={styles.leftRailClose} onClick={() => setLeftOpen(false)} aria-label="Close drawings and views">
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </span>
           </div>
           {docs.length > 1 ? (
             <label className={styles.leftRailSelect}>
@@ -262,10 +296,35 @@ export function ViewerScreen(props: Props) {
           railOpen={leftOpen}
           onRailClose={() => setLeftOpen(false)}
           onTool={setTool}
+          onToolUsed={noteToolUse}
           onMeasureMode={setMeasureMode}
           onMarks={setMarks}
         />
       </motion.div>
+      {signup && (
+        <div className={styles.gate} role="presentation" onClick={() => setSignup(null)}>
+          <div
+            className={styles.gateCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signup-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className={styles.gateClose} aria-label="Close" onClick={() => setSignup(null)}>
+              ×
+            </button>
+            <h2 id="signup-title">Sign up to SpatialSense</h2>
+            <p>
+              {signup === 'export'
+                ? 'Sign up to SpatialSense to export this drawing.'
+                : 'You have used the viewer tools. Sign up to SpatialSense to keep using them.'}
+            </p>
+            <a className={styles.pill} href={WORKSPACE_LOGIN_URL}>
+              Sign up
+            </a>
+          </div>
+        </div>
+      )}
       {glimpse && (
         <button type="button" className={styles.glimpse} onClick={() => setGlimpse(false)} aria-label="Show the drawing">
           <p>{loading ? `Opening ${loading.fileName}` : doc.info.name}</p>
