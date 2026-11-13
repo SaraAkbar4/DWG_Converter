@@ -9,10 +9,11 @@ import { ViewerThemeContext, type ViewerTheme } from '../cad/platform';
 import { useDrawingFiles } from '../convert/useDrawingFile';
 import { HOME_HERO, THEME_STORAGE_KEY, type Hero } from './content';
 import { Landing } from './Landing';
+import { fresh } from './fresh';
 import { startAnalytics, track } from './track';
 
 // Loaded on demand so the landing page stays light.
-const ViewerScreen = dynamic(() => import('./ViewerScreen').then((module) => module.ViewerScreen), { ssr: false });
+const ViewerScreen = dynamic(fresh(() => import('./ViewerScreen').then((module) => module.ViewerScreen), () => <></>), { ssr: false });
 
 export function App({ hero = HOME_HERO }: { hero?: Hero }) {
   const [theme, setTheme] = useState<ViewerTheme>('dark');

@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { ViewerTheme } from '../cad/platform';
 import type { DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
 import { FAQ, SEO_PAGES, STEPS, TRIAL_URL, type Hero } from './content';
+import { openDrawingPicker } from './pickDrawing';
 import styles from './site.module.css';
+import { fresh } from './fresh';
 import { track } from './track';
 
 // The gallery parses real DXF files with the viewer's own code, so it waits for the browser.
-const Showcase = dynamic(() => import('./Showcase').then((module) => module.Showcase), { ssr: false });
+const Showcase = dynamic(fresh(() => import('./Showcase').then((module) => module.Showcase), () => <></>), { ssr: false });
 
 type Props = {
   hero: Hero;
@@ -70,7 +72,7 @@ function DropZone({ loading, error, onFiles, onCancel }: Omit<Props, 'hero' | 't
   }, [onFiles]);
 
   const heavy = error?.code === 'too_large' || error?.code === 'crashed';
-  const pick = () => inputRef.current?.click();
+  const pick = () => openDrawingPicker(inputRef.current);
 
   return (
     <motion.div
