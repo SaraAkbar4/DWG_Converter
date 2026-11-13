@@ -18,7 +18,7 @@ test('open the sample, use the tools, and export', async ({ page }) => {
   await page.getByRole('button', { name: 'Layers' }).click();
   await expect(page.getByText('FURNITURE')).toBeVisible();
   await page.getByRole('button', { name: 'Hide all' }).click();
-  await expect(page.getByRole('status')).toContainText('Hidden: FURNITURE');
+  await expect(page.getByRole('status').filter({ hasText: 'Hidden' })).toContainText('FURNITURE');
   await page.getByRole('button', { name: 'Show all' }).last().click(); // the panel's own button
   await page.getByRole('button', { name: 'Close panel' }).click();
 
@@ -60,7 +60,7 @@ test('the layer notice clears the sidebar, and stays at the left when the sideba
 
   await page.getByRole('button', { name: 'Layers' }).click();
   await page.getByRole('button', { name: 'Hide all' }).click();
-  const notice = page.getByRole('status').filter({ hasText: 'Hidden:' });
+  const notice = page.getByRole('status').filter({ hasText: 'Hidden' });
   const rail = page.getByRole('complementary', { name: 'Drawings and views' });
   await expect(notice).toBeVisible();
   const opened = (await notice.boundingBox())!;

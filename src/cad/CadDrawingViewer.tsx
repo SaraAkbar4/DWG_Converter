@@ -27,18 +27,22 @@ const ZOOM_STEP = 1.5;
 
 type SheetMarks = { saved: CadMeasure[]; draft: CadPoint[] };
 
+const SINGLE_SIDEBAR = '(max-width: 1024px)';
+
 type Props = {
   drawing: CadDrawing;
   extraCommands: CadCommand[];
   tool: CadTool;
   measureMode: CadMeasureMode;
   marks: SheetMarks;
+  railOpen: boolean;
+  onRailClose: () => void;
   onTool: (tool: CadTool) => void;
   onMeasureMode: (mode: CadMeasureMode) => void;
   onMarks: (marks: SheetMarks | ((current: SheetMarks) => SheetMarks)) => void;
 };
 
-export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, onTool, onMeasureMode, onMarks }: Props) {
+export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onMeasureMode, onMarks }: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
@@ -96,7 +100,15 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
   });
 
   const togglePanel = (next: Exclude<CadPanel, null>) =>
-    setPanel((current) => (current === next ? null : next));
+    setPanel((current) => {
+      if (current === next) return null;
+      if (window.matchMedia(SINGLE_SIDEBAR).matches) onRailClose();
+      return next;
+    });
+  // On a tablet, the drawings rail and a tool panel cannot both stay open.
+  useEffect(() => {
+    if (railOpen && window.matchMedia(SINGLE_SIDEBAR).matches) setPanel(null);
+  }, [railOpen]);
   const keepDraft = (mode: CadMeasureMode): SheetMarks =>
     mode === 'area' && marks.draft.length >= 3
       ? { saved: [...marks.saved, { mode: 'area', points: marks.draft }], draft: [] }

@@ -731,8 +731,7 @@
     display: block;
   }
 
-  .fileNameNarrow,
-  .headerPlus {
+  .fileNameNarrow {
     display: none !important;
   }
 }

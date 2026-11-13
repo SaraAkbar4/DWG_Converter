@@ -25,28 +25,64 @@
   align-items: flex-start;
   gap: 8px;
   max-width: calc(100% - 24px);
-  transition: left 0.35s var(--ease-out);
+  transition:
+    left 0.35s var(--ease-out),
+    bottom 0.35s var(--ease-out);
 }
 
 .statusChip {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-raised) 86%, transparent);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font-size: 0.8125rem;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
 }
 
 .statusChip[data-many='true'] {
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
+  gap: 2px;
+  width: min(248px, calc(100vw - 36px));
+  padding: 10px 6px 6px;
   white-space: normal;
+}
+
+.hiddenCaption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 6px;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hiddenCount {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 980px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-align: center;
 }
 
 .hiddenList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   max-height: 220px;
   margin: 0;
   padding: 0;
@@ -57,16 +93,119 @@
 .hiddenRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
+  min-height: 34px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 10px;
+}
+
+.hiddenList .hiddenRow:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.hiddenRow .swatch {
+  flex-shrink: 0;
 }
 
 .hiddenName {
   min-width: 0;
+  flex: 1;
   overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hiddenShow,
+.hiddenShowAll {
+  border: 0;
+  background: none;
+  color: var(--primary-light);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hiddenShow {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 980px;
+  background: var(--primary-tint);
+  font-size: 0.75rem;
+}
+
+.hiddenShow:hover {
+  background: color-mix(in srgb, var(--primary-light) 24%, transparent);
+}
+
+.hiddenShow:active {
+  transform: scale(0.96);
+}
+
+.hiddenShowAll {
+  margin: 4px 6px 2px;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.hiddenShowAll:hover {
+  color: var(--text);
+}
+
+.hiddenShow:focus-visible,
+.hiddenShowAll:focus-visible,
+.hiddenClose:focus-visible,
+.hiddenCollapsed:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.hiddenClose {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hiddenClose:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.hiddenCollapsed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 980px;
+  background: color-mix(in srgb, var(--bg-raised) 86%, transparent);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+}
+
+.hiddenCollapsed:hover {
+  background: var(--bg-raised);
 }
 
 .layerRow {
@@ -159,6 +298,10 @@
 
   .statusStack {
     transition: none;
+  }
+
+  .hiddenShow:active {
+    transform: none;
   }
 }
 
@@ -527,6 +670,12 @@
     width: auto;
     height: min(56vh, 460px);
     border-radius: 16px;
+  }
+
+  /* The sheet covers the bottom of the canvas, so the hidden-layer notice sits above it. */
+  .root[data-viewer-side-panel='right'] .statusStack {
+    bottom: calc(min(56vh, 460px) + 20px);
+    max-width: calc(100% - 72px);
   }
 }
 

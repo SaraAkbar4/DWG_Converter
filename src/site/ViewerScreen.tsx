@@ -167,9 +167,6 @@ export function ViewerScreen(props: Props) {
           </span>
         </div>
         <div className={styles.viewerActions}>
-          <Tooltip title="Open another drawing">
-            <Button className={styles.headerPlus} type="text" icon={<Plus {...icon} />} onClick={pickFiles} aria-label="Open another drawing" />
-          </Tooltip>
           <Dropdown trigger={['click']} menu={{ items: EXPORTS, onClick: ({ key }) => runExport(key as ExportKind) }}>
             <Button icon={<Download {...icon} />}>
               <span className={styles.wideOnly}>Export</span>
@@ -262,6 +259,8 @@ export function ViewerScreen(props: Props) {
           tool={tool}
           measureMode={measureMode}
           marks={marks}
+          railOpen={leftOpen}
+          onRailClose={() => setLeftOpen(false)}
           onTool={setTool}
           onMeasureMode={setMeasureMode}
           onMarks={setMarks}
