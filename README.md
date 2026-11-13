@@ -17,6 +17,28 @@ pnpm build
 
 `pnpm dev` and `pnpm build` first copy the DWG engine (`libredwg-web.wasm`) into `public/wasm/`.
 
+## Deploy
+
+The site is a standard Next.js app (Node 20+). On the server:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm start   # serves on port 8020; put a reverse proxy with HTTPS in front
+```
+
+Set these environment variables before `pnpm build` (they are baked into the client bundle):
+
+| Variable | Value |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | public address, e.g. `https://viewer.kodifly.com` (canonical links, sitemap, social cards) |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project key (`phc_…`) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `https://us.i.posthog.com` |
+| `LEAD_WEBHOOK_URL` | optional: where lead-form posts are forwarded |
+
+On Vercel, add the same variables in the project settings and deploy; `pnpm build` and the `/ingest` rewrites work unchanged.
+The sample drawings in `public/samples/` are generated DXF files owned by Kodifly and are safe to publish.
+
 ## How it works
 
 ```
@@ -52,8 +74,7 @@ return that shape from another parser in `worker.ts`; nothing else changes.
 - Pan, wheel and pinch zoom, fit; select by object, layer or block; properties; layers; search.
 - Measure distance, area and angle, snapping to nearby vertices.
 - Model and layout tabs; several drawings open at once; zip archives are unpacked in the browser.
-- Export: PNG (current view), SVG and PDF (whole sheet). The PDF is written by
-  `src/site/exportDrawing.ts` with no library; its text uses Helvetica, so only Latin-1 prints.
+- Export: PNG (current view) and PDF.
 - Command palette with every action and its shortcut: Cmd/Ctrl+K or `?`.
 
 ## Pages and SEO
