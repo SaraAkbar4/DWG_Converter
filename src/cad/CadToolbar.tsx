@@ -11,7 +11,7 @@ import {
   Search,
   Square,
 } from 'lucide-react';
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { CadSelectMode } from './cadSelectionGroup';
 import { CadToolbarItem, type CadMenuOption } from './CadToolbarItem';
 import type { CadMeasureMode, CadTool } from './useCadCanvas';
@@ -32,6 +32,14 @@ type Props = {
 export function CadToolbar(props: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 768px)');
+    const apply = () => setCompact(query.matches);
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, []);
   const accent = {
     '--tool-active': token.colorPrimary,
     '--tool-active-hover': token.colorPrimaryHover,
@@ -62,7 +70,7 @@ export function CadToolbar(props: Props) {
   const currentMode = selectModes.find((o) => o.value === props.selectMode) ?? selectModes[0]!;
 
   return (
-    <div className="potree-toolbar-left potree-toolbar-horizontal" style={accent}>
+    <div className={`potree-toolbar-left potree-toolbar-horizontal${compact ? ' potree-toolbar-compact' : ''}`} style={accent}>
       <div
         className="potree-toolbar-horizontal-bar"
         role="toolbar"

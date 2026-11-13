@@ -465,9 +465,13 @@
 }
 
 @media (max-width: 768px) {
+  [data-viewer-theme] .potree-toolbar-left.potree-toolbar-horizontal {
+    z-index: 1006;
+  }
+
+  /* The right panel covers this corner, so the center and zoom controls are hidden. */
   [data-viewer-side-panel='right'] .potree-toolbar-right {
-    right: 12px !important;
-    bottom: calc(min(56vh, 460px) + 20px) !important;
+    display: none;
   }
 }
 

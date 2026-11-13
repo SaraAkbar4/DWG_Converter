@@ -42,7 +42,7 @@ type PanelProps = {
   theme: ViewerTheme;
 };
 
-/** Right-hand panel on desktop, bottom sheet on phones (see `.sidePanel`). */
+/** Right-hand panel. On a phone it stays on the right and starts below the toolbar. */
 export function FloatingSidePanel({ title, extra, onClose, children, theme: mode }: PanelProps) {
   return (
     <div className={styles.sidePanel} data-tone={mode}>

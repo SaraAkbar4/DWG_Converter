@@ -386,6 +386,11 @@
   min-height: 0;
   padding: 14px;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.sidePanelBody::-webkit-scrollbar {
+  display: none;
 }
 
 .search {
@@ -670,38 +675,12 @@
 
 @media (max-width: 768px) {
   .sidePanel {
-    top: auto;
-    left: 8px;
+    top: 96px;
     right: 8px;
-    bottom: 8px;
-    width: auto;
-    height: min(56vh, 460px);
-    border-radius: 16px;
-  }
-
-  /* A sheet covers the bottom of the canvas, so the hidden-layer notice sits above it and
-     shrinks to the room that is left, scrolling its list instead of running off the top. */
-  .root[data-viewer-side-panel='right'] .statusStack,
-  .root[data-rail-open='true'] .statusStack {
-    top: 104px;
-    bottom: calc(min(56vh, 460px) + 20px);
-    justify-content: flex-end;
-    max-width: calc(100% - 72px);
-    pointer-events: none;
-  }
-
-  .statusStack > * {
-    pointer-events: auto;
-  }
-
-  .statusChip[data-many='true'] {
-    max-height: 100%;
-    min-height: 0;
-  }
-
-  .hiddenList {
-    flex: 1 1 auto;
-    min-height: 0;
+    bottom: 12px;
+    left: auto;
+    width: min(240px, calc(100% - 72px));
+    height: auto;
   }
 }
 
