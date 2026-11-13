@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Illustration options</title>
+<style>
+  :root { --ink:#1d1d1f; --muted:#86868b; --tile:#f5f5f7; --blue:#2459d8; --violet:#7d5bf0; --bg:#fff; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.47 -apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif; -webkit-font-smoothing:antialiased; }
+  main { max-width:1024px; margin:0 auto; padding:56px 22px 96px; }
+  h1 { font-size:clamp(32px,5vw,48px); font-weight:600; letter-spacing:-.02em; line-height:1.08; margin:0 0 8px; }
+  h1 span, h2 span { color:var(--muted); }
+  .lede { color:#515154; margin:0 0 48px; max-width:60ch; }
+  h2 { font-size:24px; font-weight:600; letter-spacing:-.01em; margin:56px 0 6px; }
+  .where { color:var(--muted); font-size:15px; margin:0 0 20px; }
+  .tile { background:var(--tile); border-radius:28px; padding:32px; display:grid; place-items:center; }
+  .tile.dark { background:#1d1d1f; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .grid3 .tile { aspect-ratio:1; padding:24px; }
+  svg { width:100%; height:auto; display:block; }
+  .tag { display:inline-block; font-size:13px; font-weight:600; color:var(--blue); margin-bottom:4px; }
+  @media (max-width:700px){ .grid3 { grid-template-columns:1fr; } }
+  /* gentle draw-in, off when reduced motion is asked for */
+  .draw path, .draw line, .draw rect, .draw circle, .draw polyline { stroke-dasharray:1200; stroke-dashoffset:1200; animation:draw 2.2s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  @media (prefers-reduced-motion: reduce){ .draw * { animation:none !important; stroke-dashoffset:0 !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Illustration options. <span>Pick what goes in.</span></h1>
+  <p class="lede">All five are line drawings in the site's own style: thin grey strokes, one Kodifly blue accent, no clutter. Tell me which ones to add (for example "A, C and D").</p>
+
+  <span class="tag">Option A</span>
+  <h2>Hero: a plan becoming a 3D room. <span>Shows "drawing in, model out".</span></h2>
+  <p class="where">Where: inside the big drop tile on the landing page, behind the "Drop a DWG or DXF file" text.</p>
+  <div class="tile">
+    <svg class="draw" viewBox="0 0 800 380" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- flat plan on the left -->
+      <g stroke="#86868b" stroke-width="1.5">
+        <rect x="60" y="80" width="260" height="220"/>
+        <line x1="190" y1="80" x2="190" y2="170"/><line x1="190" y1="210" x2="190" y2="300"/>
+        <line x1="60" y1="200" x2="120" y2="200"/><line x1="160" y1="200" x2="190" y2="200"/>
+        <path d="M190 170 A40 40 0 0 1 230 210"/>
+        <rect x="220" y="220" width="70" height="55"/><rect x="80" y="100" width="80" height="40"/>
+      </g>
+      <g stroke="#2459d8" stroke-width="1.5"><line x1="60" y1="330" x2="320" y2="330"/><line x1="60" y1="322" x2="60" y2="338"/><line x1="320" y1="322" x2="320" y2="338"/></g>
+      <!-- arrow -->
+      <g stroke="#2459d8" stroke-width="2"><line x1="360" y1="190" x2="440" y2="190"/><polyline points="428,178 440,190 428,202"/></g>
+      <!-- isometric room on the right -->
+      <g stroke="#1d1d1f" stroke-width="1.5">
+        <path d="M480 230 L610 160 L740 230 L610 300 Z"/>
+        <path d="M480 230 L480 130 L610 60 L610 160"/>
+        <path d="M610 60 L740 130 L740 230"/>
+        <line x1="545" y1="195" x2="545" y2="95"/>
+      </g>
+      <g stroke="#2459d8" stroke-width="1.5"><path d="M640 235 L680 213 L710 229 L670 251 Z"/><path d="M640 235 L640 215 L680 193 L680 213"/></g>
+    </svg>
+  </div>
+
+  <span class="tag">Option B</span>
+  <h2>Privacy: the file stays on the laptop. <span>The cloud is crossed out.</span></h2>
+  <p class="where">Where: the dark "Private by design" tile, above the headline.</p>
+  <div class="tile dark">
+    <svg class="draw" viewBox="0 0 800 300" fill="none" stroke-linecap="round" stroke-linejoin="round" style="max-width:640px">
+      <g stroke="#a1a1a6" stroke-width="1.5">
+        <rect x="250" y="70" width="300" height="180" rx="12"/>
+        <path d="M210 250 H590 L570 275 H230 Z"/>
+      </g>
+      <g stroke="#6b9aff" stroke-width="2">
+        <path d="M370 110 H415 L440 135 V210 H370 Z"/><polyline points="415,110 415,135 440,135"/>
+        <rect x="385" y="160" width="40" height="32" rx="4"/><path d="M393 160 V150 a12 12 0 0 1 24 0 V160"/>
+      </g>
+      <g stroke="#86868b" stroke-width="1.5" stroke-dasharray="6 8"><path d="M560 120 C 620 80, 650 80, 660 90"/></g>
+      <g stroke="#86868b" stroke-width="1.5"><path d="M650 110 a22 22 0 0 1 40-14 a18 18 0 0 1 30 18 a16 16 0 0 1-6 30 H660 a18 18 0 0 1-10-34 Z"/></g>
+      <g stroke="#ff6b6b" stroke-width="2"><line x1="655" y1="80" x2="725" y2="150"/></g>
+    </svg>
+  </div>
+
+  <span class="tag">Option C</span>
+  <h2>How it works: three small spot drawings. <span>One per step.</span></h2>
+  <p class="where">Where: replaces the big grey numbers 1, 2, 3 in the "Three steps" tiles.</p>
+  <div class="grid3">
+    <div class="tile"><svg class="draw" viewBox="0 0 200 200" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#86868b" stroke-width="1.5"><path d="M60 50 H120 L145 75 V160 H60 Z"/><polyline points="120,50 120,75 145,75"/></g>
+      <text x="102" y="125" text-anchor="middle" font-size="18" font-weight="600" fill="#1d1d1f" font-family="-apple-system,sans-serif">DWG</text>
+      <g stroke="#2459d8" stroke-width="2"><line x1="102" y1="15" x2="102" y2="40"/><polyline points="92,30 102,40 112,30"/></g>
+      <path d="M40 175 H165" stroke="#2459d8" stroke-width="2" stroke-dasharray="4 6"/>
+    </svg></div>
+    <div class="tile"><svg class="draw" viewBox="0 0 200 200" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#86868b" stroke-width="1.5"><rect x="30" y="45" width="140" height="100" rx="8"/><line x1="30" y1="65" x2="170" y2="65"/><circle cx="42" cy="55" r="2.5"/><circle cx="52" cy="55" r="2.5"/><circle cx="62" cy="55" r="2.5"/></g>
+      <g stroke="#2459d8" stroke-width="2"><rect x="70" y="80" width="60" height="50" rx="4"/><path d="M80 120 L95 100 L105 112 L113 104 L122 120"/></g>
+      <g stroke="#1d1d1f" stroke-width="1.5"><path d="M70 165 H130"/><path d="M85 145 L80 165 M115 145 L120 165"/></g>
+    </svg></div>
+    <div class="tile"><svg class="draw" viewBox="0 0 200 200" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#86868b" stroke-width="1.5"><rect x="35" y="40" width="130" height="110"/><line x1="100" y1="40" x2="100" y2="150"/><line x1="35" y1="100" x2="100" y2="100"/></g>
+      <g stroke="#2459d8" stroke-width="2"><line x1="35" y1="170" x2="165" y2="170"/><line x1="35" y1="163" x2="35" y2="177"/><line x1="165" y1="163" x2="165" y2="177"/></g>
+      <circle cx="135" cy="80" r="22" stroke="#1d1d1f" stroke-width="1.5"/><line x1="151" y1="96" x2="170" y2="115" stroke="#1d1d1f" stroke-width="3"/>
+    </svg></div>
+  </div>
+
+  <span class="tag">Option D</span>
+  <h2>Formats: stacked file cards. <span>DWG and DXF side by side.</span></h2>
+  <p class="where">Where: the "What you see" tile in Supported formats.</p>
+  <div class="tile">
+    <svg class="draw" viewBox="0 0 800 260" fill="none" stroke-linecap="round" stroke-linejoin="round" style="max-width:640px">
+      <g stroke="#86868b" stroke-width="1.5"><rect x="190" y="60" width="150" height="180" rx="14"/><rect x="210" y="40" width="150" height="180" rx="14" fill="#f5f5f7"/></g>
+      <g stroke="#1d1d1f" stroke-width="1.5"><rect x="230" y="20" width="150" height="180" rx="14" fill="#fff"/><path d="M255 150 V70 H355 V150 Z M305 70 V110 M255 110 H285"/></g>
+      <text x="305" y="182" text-anchor="middle" font-size="20" font-weight="600" fill="#2459d8" font-family="-apple-system,sans-serif">.dwg</text>
+      <g stroke="#86868b" stroke-width="1.5"><rect x="440" y="60" width="150" height="180" rx="14"/><rect x="460" y="40" width="150" height="180" rx="14" fill="#f5f5f7"/></g>
+      <g stroke="#1d1d1f" stroke-width="1.5"><rect x="480" y="20" width="150" height="180" rx="14" fill="#fff"/><circle cx="555" cy="105" r="35"/><path d="M520 105 H590 M555 70 V140"/></g>
+      <text x="555" y="182" text-anchor="middle" font-size="20" font-weight="600" fill="#2459d8" font-family="-apple-system,sans-serif">.dxf</text>
+    </svg>
+  </div>
+
+  <span class="tag">Option E</span>
+  <h2>Closing: drawing to BIM model. <span>Sells the Kodifly platform.</span></h2>
+  <p class="where">Where: the "Need more than a viewer?" tile at the bottom, above the headline.</p>
+  <div class="tile">
+    <svg class="draw" viewBox="0 0 800 260" fill="none" stroke-linecap="round" stroke-linejoin="round" style="max-width:700px">
+      <g stroke="#86868b" stroke-width="1.5"><rect x="60" y="80" width="140" height="110" rx="6"/><path d="M80 170 V100 H180 V170 M130 100 V140"/></g>
+      <g stroke="#2459d8" stroke-width="2" stroke-dasharray="5 7"><line x1="215" y1="135" x2="300" y2="135"/></g>
+      <g stroke="#1d1d1f" stroke-width="1.5"><path d="M320 160 L400 120 L480 160 L400 200 Z"/><path d="M320 160 V90 L400 50 L480 90 V160 M400 50 V120"/></g>
+      <g stroke="#2459d8" stroke-width="2" stroke-dasharray="5 7"><line x1="500" y1="135" x2="585" y2="135"/></g>
+      <g fill="#2459d8"><circle cx="630" cy="110" r="3"/><circle cx="650" cy="125" r="3"/><circle cx="670" cy="100" r="3"/><circle cx="690" cy="130" r="3"/><circle cx="645" cy="150" r="3"/><circle cx="675" cy="160" r="3"/><circle cx="705" cy="110" r="3"/><circle cx="715" cy="150" r="3"/><circle cx="625" cy="140" r="3"/><circle cx="695" cy="90" r="3"/></g>
+      <g font-family="-apple-system,sans-serif" font-size="14" fill="#86868b" text-anchor="middle"><text x="130" y="225">Drawing</text><text x="400" y="225">BIM model</text><text x="670" y="225">Point cloud</text></g>
+    </svg>
+  </div>
+
+  <h1 style="margin-top:96px">More options. <span>Different styles.</span></h1>
+  <p class="lede">The first five are all thin line drawings. These six try other looks: soft filled shapes, blueprint, isometric, and gradient glass.</p>
+
+  <span class="tag">Option F · soft filled</span>
+  <h2>Hero: floating plan sheets. <span>Layered paper with soft shadows.</span></h2>
+  <p class="where">Where: the big drop tile, as a calmer alternative to A.</p>
+  <div class="tile">
+    <svg viewBox="0 0 800 340" style="max-width:700px">
+      <defs><filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1d1d1f" flood-opacity=".14"/></filter></defs>
+      <g transform="rotate(-8 300 180)" filter="url(#sh)"><rect x="170" y="70" width="260" height="190" rx="14" fill="#fff"/><path d="M200 230 V100 H400 V230 Z M300 100 V170 M200 170 H260" fill="none" stroke="#c7c7cc" stroke-width="2"/></g>
+      <g transform="rotate(5 500 170)" filter="url(#sh)"><rect x="370" y="60" width="260" height="190" rx="14" fill="#fff"/><path d="M400 220 V90 H600 V220 Z M500 90 V150 M500 185 V220 M400 150 H450" fill="none" stroke="#1d1d1f" stroke-width="2"/><path d="M500 150 A35 35 0 0 1 535 185" fill="none" stroke="#2459d8" stroke-width="2.5"/><rect x="530" y="180" width="45" height="30" rx="4" fill="#2459d8" opacity=".15"/></g>
+    </svg>
+  </div>
+
+  <span class="tag">Option G · blueprint</span>
+  <h2>Blueprint grid with dimensions. <span>Feels like real CAD.</span></h2>
+  <p class="where">Where: the dark privacy tile, or a full-width band between sections.</p>
+  <div class="tile" style="background:#0b2a6f">
+    <svg viewBox="0 0 800 320" fill="none" stroke-linecap="round" style="max-width:720px">
+      <defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0 H0 V20" stroke="#ffffff" stroke-opacity=".08"/></pattern></defs>
+      <rect width="800" height="320" fill="url(#g)"/>
+      <g stroke="#ffffff" stroke-width="2"><rect x="180" y="60" width="440" height="200"/><line x1="400" y1="60" x2="400" y2="160"/><line x1="400" y1="200" x2="400" y2="260"/><line x1="180" y1="160" x2="290" y2="160"/></g>
+      <path d="M400 160 A40 40 0 0 1 440 200" stroke="#9ec0ff" stroke-width="2"/>
+      <g stroke="#9ec0ff" stroke-width="1.2"><line x1="180" y1="290" x2="620" y2="290"/><line x1="180" y1="282" x2="180" y2="298"/><line x1="620" y1="282" x2="620" y2="298"/><line x1="650" y1="60" x2="650" y2="260"/><line x1="642" y1="60" x2="658" y2="60"/><line x1="642" y1="260" x2="658" y2="260"/></g>
+      <g fill="#9ec0ff" font-family="ui-monospace,Menlo,monospace" font-size="13"><text x="400" y="312" text-anchor="middle">9000</text><text x="672" y="164">4200</text><text x="235" y="115" fill="#fff" opacity=".7">LIVING</text><text x="470" y="115" fill="#fff" opacity=".7">BEDROOM</text></g>
+    </svg>
+  </div>
+
+  <span class="tag">Option H · isometric</span>
+  <h2>Isometric apartment, cut open. <span>Most "3D product" feel.</span></h2>
+  <p class="where">Where: the hero, or the "Need more than a viewer?" tile.</p>
+  <div class="tile">
+    <svg viewBox="0 0 800 380" stroke-linejoin="round" style="max-width:640px">
+      <path d="M400 330 L160 210 L400 90 L640 210 Z" fill="#e8e8ed"/>
+      <path d="M160 210 V140 L400 20 V90 Z" fill="#fff" stroke="#d2d2d7"/>
+      <path d="M400 20 L640 140 V210 L400 90 Z" fill="#f5f5f7" stroke="#d2d2d7"/>
+      <path d="M400 90 L280 150 V100 L400 40 Z" fill="#fff" stroke="#d2d2d7"/>
+      <path d="M455 190 L520 157 L575 185 L510 218 Z" fill="#2459d8" opacity=".9"/>
+      <path d="M455 190 V200 L510 228 V218 Z" fill="#1a43a6"/><path d="M510 218 V228 L575 195 V185 Z" fill="#163a8f"/>
+      <path d="M250 215 L300 190 L340 210 L290 235 Z" fill="#7d5bf0" opacity=".85"/>
+      <circle cx="370" cy="250" r="18" fill="#fff" stroke="#d2d2d7"/>
+    </svg>
+  </div>
+
+  <span class="tag">Option I · gradient glass</span>
+  <h2>Glass file icon. <span>Bold, very Apple, works as a logo-like mark.</span></h2>
+  <p class="where">Where: above the hero headline, small (about 96 px).</p>
+  <div class="tile">
+    <svg viewBox="0 0 200 200" style="max-width:220px">
+      <defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7dff"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      <path d="M50 20 H125 L160 55 V170 a10 10 0 0 1-10 10 H50 a10 10 0 0 1-10-10 V30 a10 10 0 0 1 10-10 Z" fill="url(#gl)"/>
+      <path d="M125 20 V45 a10 10 0 0 0 10 10 H160 Z" fill="#fff" opacity=".45"/>
+      <path d="M68 145 V85 H132 V145 Z M100 85 V115 M68 115 H88" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <span class="tag">Option J · soft filled</span>
+  <h2>Lead magnet: talk to an expert. <span>Friendly, people-free.</span></h2>
+  <p class="where">Where: the lead form and "Heavy drawing? We can help" message.</p>
+  <div class="tile">
+    <svg viewBox="0 0 600 260" style="max-width:520px">
+      <rect x="80" y="40" width="250" height="140" rx="22" fill="#fff"/>
+      <path d="M120 180 L110 220 L160 180 Z" fill="#fff"/>
+      <rect x="110" y="75" width="150" height="12" rx="6" fill="#d2d2d7"/><rect x="110" y="100" width="190" height="12" rx="6" fill="#d2d2d7"/><rect x="110" y="125" width="110" height="12" rx="6" fill="#d2d2d7"/>
+      <rect x="290" y="100" width="230" height="110" rx="22" fill="#2459d8"/>
+      <path d="M480 210 L495 240 L450 210 Z" fill="#2459d8"/>
+      <path d="M330 155 L355 175 L395 130" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="415" y="140" width="75" height="12" rx="6" fill="#fff" opacity=".6"/>
+    </svg>
+  </div>
+
+  <span class="tag">Option K · line, animated loop</span>
+  <h2>Loading: a plan being traced. <span>Replaces the plain progress list.</span></h2>
+  <p class="where">Where: inside the drop tile while a file is opening.</p>
+  <div class="tile">
+    <svg viewBox="0 0 300 200" fill="none" stroke-linecap="round" style="max-width:320px">
+      <rect x="40" y="30" width="220" height="140" stroke="#d2d2d7" stroke-width="2"/>
+      <path d="M40 30 H260 V170 H40 Z M150 30 V100 M40 110 H100" stroke="#2459d8" stroke-width="2.5" pathLength="100" stroke-dasharray="25 75">
+        <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2.4s" repeatCount="indefinite"/>
+      </path>
+    </svg>
+  </div>
+</main>
+</body>
+</html>

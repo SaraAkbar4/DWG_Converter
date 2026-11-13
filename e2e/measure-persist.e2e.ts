@@ -1,0 +1,56 @@
+import { readFileSync } from 'node:fs';
+import { expect, test } from '@playwright/test';
+
+const sample = readFileSync('public/samples/studio-apartment.dxf');
+
+const bluePixels = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => {
+    const node = document.querySelector('canvas');
+    if (!node) return 0;
+    const ctx = node.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return 0;
+    const { data } = ctx.getImageData(0, 0, node.width, node.height);
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i] ?? 0;
+      const g = data[i + 1] ?? 0;
+      const b = data[i + 2] ?? 0;
+      if (b > 160 && r < 120 && g < 170 && b > r + 40) count += 1;
+    }
+    return count;
+  });
+
+test('measurements stay on the sheet and in the export', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'studio-apartment.dxf', mimeType: 'application/dxf', buffer: sample });
+  const canvas = page.getByRole('img', { name: 'Vector drawing' });
+  await expect(canvas).toBeVisible();
+  const glimpse = page.getByRole('button', { name: 'Show the drawing' });
+  if (await glimpse.isVisible()) await glimpse.click();
+
+  const before = await bluePixels(page);
+  await page.keyboard.press('m');
+  const box = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: box.width * 0.35, y: box.height * 0.5 }, force: true });
+  await canvas.click({ position: { x: box.width * 0.62, y: box.height * 0.42 }, force: true });
+  const measured = await bluePixels(page);
+  expect(measured).toBeGreaterThan(before);
+
+  await page.keyboard.press('m');
+  await expect(page.getByText('Measure distance')).toHaveCount(0);
+  const kept = await bluePixels(page);
+  expect(kept).toBeGreaterThan(before);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('header').getByRole('button', { name: /Export|^$/ }).filter({ has: page.locator('svg.lucide-download') }).click();
+  await page.getByRole('menuitem', { name: /SVG/ }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  if (stream) {
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  }
+  const text = Buffer.concat(chunks).toString('utf8');
+  expect(text).toContain('stroke="#2459d8"');
+  expect(text).toContain('fill="#2459d8"');
+});

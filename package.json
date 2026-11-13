@@ -1,0 +1,38 @@
+{
+  "name": "kodifly-dwg-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "wasm": "mkdir -p public/wasm && cp node_modules/@mlightcad/libredwg-web/wasm/libredwg-web.wasm public/wasm/",
+    "predev": "pnpm wasm",
+    "prebuild": "pnpm wasm",
+    "dev": "next dev -p 8020",
+    "build": "next build",
+    "start": "next start -p 8020",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "knip": "knip",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/nextjs-registry": "^1.3.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@mlightcad/libredwg-web": "^0.8.8",
+    "antd": "^5.29.3",
+    "lucide-react": "^1.72.0",
+    "motion": "^14.12.0",
+    "next": "^15.5.29",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "knip": "^6.45.1",
+    "typescript": "^5.9.2",
+    "vitest": "^5.1.0"
+  }
+}

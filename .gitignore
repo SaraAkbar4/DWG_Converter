@@ -1,0 +1,9 @@
+node_modules
+.next
+.next-*
+public/wasm
+*.tsbuildinfo
+.env*.local
+tests/fixtures/_local-*
+test-results
+playwright-report
