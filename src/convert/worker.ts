@@ -55,7 +55,7 @@ self.onmessage = async ({ data }: MessageEvent<WorkerRequest>) => {
       database = parseDxf(data.buffer);
     } else {
       // The WebAssembly engine is fetched only when a DWG is opened.
-      const engine = await LibreDwg.create('/wasm/');
+      const engine = await LibreDwg.create('/wasm');
       const pointer = engine.dwg_read_data(data.buffer, Dwg_File_Type.DWG);
       if (!pointer) throw new Failure('corrupt', 'This file is damaged or incomplete, so it could not be read.');
       database = engine.convert(pointer);

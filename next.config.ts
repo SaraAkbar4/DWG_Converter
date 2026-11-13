@@ -1,4 +1,15 @@
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { NextConfig } from 'next';
+
+// Vercel runs `next build` directly, which skips the package.json `prebuild` script.
+// The DWG engine is gitignored, so copy it here or DWG files 404 on the deployed site.
+const wasmDir = join(process.cwd(), 'public', 'wasm');
+mkdirSync(wasmDir, { recursive: true });
+copyFileSync(
+  join(process.cwd(), 'node_modules/@mlightcad/libredwg-web/wasm/libredwg-web.wasm'),
+  join(wasmDir, 'libredwg-web.wasm'),
+);
 
 const config: NextConfig = {
   reactStrictMode: true,
