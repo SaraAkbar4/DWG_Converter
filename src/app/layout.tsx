@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: { title, description, type: 'website' },
   icons: { icon: '/icon.svg' },
 };
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#000000' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#000000' };
 
 const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
 
