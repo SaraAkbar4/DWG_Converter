@@ -15,13 +15,13 @@ import { track } from './track';
 const ViewerScreen = dynamic(() => import('./ViewerScreen').then((module) => module.ViewerScreen), { ssr: false });
 
 export function App({ hero = HOME_HERO }: { hero?: Hero }) {
-  const [theme, setTheme] = useState<ViewerTheme>('light');
+  const [theme, setTheme] = useState<ViewerTheme>('dark');
   const { docs, loading, error, open, closeAll, cancel, dismissError } = useDrawingFiles();
   const opened = useRef(0);
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    const next = stored === 'dark' || stored === 'light' ? stored : 'light';
+    const next = stored === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     setTheme(next);
   }, []);

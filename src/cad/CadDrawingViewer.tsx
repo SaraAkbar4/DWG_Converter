@@ -224,6 +224,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         onExitIsolate={() =>
           layers.isolatedLayer != null && layers.toggleIsolate(layers.isolatedLayer)
         }
+        onShowLayer={layers.toggleHidden}
         onResetLayers={layers.reset}
       />
       <CadViewRail onFit={canvas.fit} onZoom={canvas.zoomBy} />
