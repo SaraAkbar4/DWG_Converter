@@ -16,15 +16,8 @@ const config: NextConfig = {
   // Lets a second server (a preview next to a running build) use its own folder.
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   transpilePackages: ['@mlightcad/libredwg-web'],
-  // PostHog is served from the site's own origin so ad blockers do not drop the events.
-  async rewrites() {
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
-    const assets = host.replace('.i.posthog.com', '-assets.i.posthog.com');
-    return [
-      { source: '/ingest/static/:path*', destination: `${assets}/static/:path*` },
-      { source: '/ingest/:path*', destination: `${host}/:path*` },
-    ];
-  },
+  // /ingest is proxied by src/app/ingest. A rewrite drops the trailing slash on /s/ and PostHog
+  // resets the connection, so session recordings never arrive.
   skipTrailingSlashRedirect: true,
   webpack: (webpackConfig) => {
     // The DWG engine's loader also targets Node; these modules never run in the browser.

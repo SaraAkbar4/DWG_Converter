@@ -1,27 +1,31 @@
-import posthog from 'posthog-js';
+import posthog from 'posthog-js/full';
 
 const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+const UI_HOST = HOST.replace('.i.posthog.com', '.posthog.com');
 let ready = false;
 
 /**
- * Starts PostHog once, in the browser, when a project key is set. Autocapture stays off and
- * replays block every canvas: a visitor's drawing must never end up in a recording.
+ * Starts PostHog once, in the browser, when a project key is set. Autocapture stays off.
+ * The recorder ships inside the page so a blocked script cannot stop the replay.
+ * The drawing canvas is included, so a replay shows the file the visitor is viewing.
  */
 export function startAnalytics() {
   if (ready || !KEY || typeof window === 'undefined') return;
   ready = true;
   posthog.init(KEY, {
     api_host: '/ingest',
-    ui_host: HOST,
+    ui_host: UI_HOST,
     autocapture: false,
     capture_pageview: true,
-    // Replays show the page chrome only: every canvas is blanked and every input masked,
-    // so a visitor's drawing is never recorded.
+    // Anonymous visitors still get a profile, so their replay shows up in PostHog.
+    person_profiles: 'always',
+    disable_session_recording: false,
     session_recording: {
       maskAllInputs: true,
       maskTextSelector: '[data-ph-mask]',
-      blockSelector: 'canvas, .ph-no-capture',
+      // The project leaves canvases blank. This override records the drawing.
+      captureCanvas: { recordCanvas: true, canvasFps: 4, canvasQuality: '0.4' },
     },
     capture_pageleave: true,
     persistence: 'localStorage+cookie',
