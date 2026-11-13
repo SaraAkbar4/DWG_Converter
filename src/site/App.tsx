@@ -9,7 +9,7 @@ import { ViewerThemeContext, type ViewerTheme } from '../cad/platform';
 import { useDrawingFiles } from '../convert/useDrawingFile';
 import { HOME_HERO, THEME_STORAGE_KEY, type Hero } from './content';
 import { Landing } from './Landing';
-import { track } from './track';
+import { startAnalytics, track } from './track';
 
 // Loaded on demand so the landing page stays light.
 const ViewerScreen = dynamic(() => import('./ViewerScreen').then((module) => module.ViewerScreen), { ssr: false });
@@ -25,6 +25,7 @@ export function App({ hero = HOME_HERO }: { hero?: Hero }) {
     document.documentElement.dataset.theme = next;
     setTheme(next);
   }, []);
+  useEffect(startAnalytics, []);
   useEffect(() => {
     // Production only: in development the cache would serve stale code.
     if (process.env.NODE_ENV === 'production') void navigator.serviceWorker?.register('/sw.js');

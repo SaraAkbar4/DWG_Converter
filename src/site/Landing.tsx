@@ -6,6 +6,7 @@ import type { ViewerTheme } from '../cad/platform';
 import type { DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
 import { FAQ, SEO_PAGES, STEPS, TRIAL_URL, type Hero } from './content';
 import styles from './site.module.css';
+import { track } from './track';
 
 // The gallery parses real DXF files with the viewer's own code, so it waits for the browser.
 const Showcase = dynamic(() => import('./Showcase').then((module) => module.Showcase), { ssr: false });
@@ -116,7 +117,7 @@ function DropZone({ loading, error, onFiles, onCancel }: Omit<Props, 'hero' | 't
           <p>{error.message}</p>
           <div className={styles.dropActions}>
             {heavy && (
-              <a className={styles.pill} href={TRIAL_URL}>
+              <a className={styles.pill} href={TRIAL_URL} onClick={() => track('trial_clicked', { where: 'too_heavy' })}>
                 Start free trial
               </a>
             )}
@@ -159,7 +160,7 @@ export function Landing({ hero, theme, onToggleTheme, ...drop }: Props) {
           <button type="button" className={styles.iconButton} onClick={onToggleTheme} aria-label="Switch theme">
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <a className={styles.pillSmall} href={TRIAL_URL}>
+          <a className={styles.pillSmall} href={TRIAL_URL} onClick={() => track('trial_clicked', { where: 'header' })}>
             Start free trial
           </a>
         </div>
@@ -243,7 +244,7 @@ export function Landing({ hero, theme, onToggleTheme, ...drop }: Props) {
               Kodifly turns IFC and BIM models, point clouds and site surveys into one spatial workspace. If your
               drawings are part of something bigger, let&apos;s talk.
             </p>
-            <a className={styles.pill} href={TRIAL_URL}>
+            <a className={styles.pill} href={TRIAL_URL} onClick={() => track('trial_clicked', { where: 'footer_cta' })}>
               Start free trial
             </a>
           </div>

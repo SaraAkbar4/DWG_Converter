@@ -130,7 +130,7 @@ export function ViewerScreen(props: Props) {
     { label: 'Back', run: closeDoc },
     { label: 'Full screen', run: toggleFullscreen },
     { label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', run: props.onToggleTheme },
-    { label: 'Start free trial', run: () => location.assign(TRIAL_URL) },
+    { label: 'Start free trial', run: () => { track('trial_clicked', { where: 'palette' }); location.assign(TRIAL_URL); } },
   ];
 
   return (
@@ -178,7 +178,7 @@ export function ViewerScreen(props: Props) {
           <Tooltip title={theme === 'dark' ? 'Light theme' : 'Dark theme'}>
             <Button type="text" icon={theme === 'dark' ? <Sun {...icon} /> : <Moon {...icon} />} onClick={props.onToggleTheme} aria-label="Switch theme" />
           </Tooltip>
-          <Button type="primary" href={TRIAL_URL} icon={<MessageCircle {...icon} />}>
+          <Button type="primary" href={TRIAL_URL} icon={<MessageCircle {...icon} />} onClick={() => track('trial_clicked', { where: 'viewer' })}>
             <span className={styles.wideOnly}>Start free trial</span>
           </Button>
         </div>
@@ -189,7 +189,7 @@ export function ViewerScreen(props: Props) {
       <motion.div
         ref={stageRef}
         layoutId="stage"
-        className={styles.viewerStage}
+        className={`${styles.viewerStage} ph-no-capture`}
         data-glimpse={glimpse}
         data-left-rail={leftOpen ? 'open' : 'closed'}
         transition={{ type: 'spring', bounce: 0, duration: 0.45 }}

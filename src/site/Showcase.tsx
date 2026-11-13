@@ -8,6 +8,7 @@ import { prepareCadScene } from '../cad/prepareCadScene';
 import type { CadDrawing } from '../cad/types';
 import type { FileInfo, WorkerMessage, WorkerRequest } from '../convert/protocol';
 import styles from './site.module.css';
+import { track } from './track';
 
 /** Drawings shipped with the site: real files the viewer opens like any other. */
 const SAMPLES = [
@@ -134,10 +135,14 @@ function Card({ sample, onOpen }: { sample: Sample; onOpen: (file: File) => void
       data-wide={'wide' in sample && sample.wide}
       data-ready={loaded !== null}
       disabled={!loaded}
-      onClick={() => loaded && onOpen(new File([loaded.blob], sample.file))}
+      onClick={() => {
+        if (!loaded) return;
+        track('sample_opened', { file: sample.file });
+        onOpen(new File([loaded.blob], sample.file));
+      }}
       aria-label={`Open ${sample.title} in the viewer`}
     >
-      <canvas ref={canvasRef} className={styles.scene} aria-hidden />
+      <canvas ref={canvasRef} className={`${styles.scene} ph-no-capture`} aria-hidden />
       <span className={styles.badge}>{format}</span>
       <span className={styles.showcaseCaption}>
         <span>{sample.kind}</span>

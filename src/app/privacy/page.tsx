@@ -27,8 +27,10 @@ export default function Privacy() {
       </p>
       <h2>Usage statistics</h2>
       <p>
-        We may count page visits and actions such as &quot;drawing opened&quot; or &quot;export clicked&quot; with a
-        privacy-friendly analytics service that does not use cookies. File names and drawing contents are never sent.
+        We count page visits and actions such as &quot;drawing opened&quot; or &quot;export clicked&quot; with PostHog,
+        and we may record how the page itself is used (where you click and scroll) to improve it. In those recordings
+        the drawing area is blanked and anything you type is masked. File names and drawing contents are never sent.
+        PostHog stores a cookie and browser storage to tell visits apart.
       </p>
       <h2>Questions and requests</h2>
       <p>To see, correct or delete the contact details you gave us, get in touch with Kodifly.</p>
