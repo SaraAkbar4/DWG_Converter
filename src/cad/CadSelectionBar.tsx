@@ -42,9 +42,9 @@ export function CadSelectionBar(props: Props) {
       (finished ? measureLabel(finished, drawing) : null);
     const titles = { distance: 'Measure distance', area: 'Measure area', angle: 'Measure angle' };
     const hints = {
-      distance: 'Click two points. It stays on this sheet until you close the viewer.',
-      area: 'Click the corners, then the first point again. Press Enter to finish.',
-      angle: 'Click three points. The angle stays until you close the viewer.',
+      distance: 'Click two points. Right-click to stop. It stays on this sheet until you close the viewer.',
+      area: 'Click the corners, then the first point again. Right-click to stop. It stays on this sheet until you close the viewer.',
+      angle: 'Click three points. Right-click to stop. The angle stays until you close the viewer.',
     };
     return (
       <CadSelectionPill

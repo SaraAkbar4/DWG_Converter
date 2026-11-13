@@ -43,12 +43,13 @@ type Options = {
   draft: CadPoint[];
   onDraft: (points: CadPoint[]) => void;
   onCommit: (measure: CadMeasure) => void;
+  onStopMeasure: () => void;
   onSelect: (selection: CadSelection) => void;
 };
 
 export function useCadCanvas(options: Options) {
   const { scene, colorMode, paper, showGrid, lineWeight, minTextPx, english, image } = options;
-  const { accent, hiddenLayers, highlight, tool, measureMode, measures, draft, onDraft, onCommit, onSelect } = options;
+  const { accent, hiddenLayers, highlight, tool, measureMode, measures, draft, onDraft, onCommit, onStopMeasure, onSelect } = options;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewRef = useRef<CadView | null>(null);
   const fitScaleRef = useRef(1);
@@ -83,6 +84,7 @@ export function useCadCanvas(options: Options) {
     draft,
     onDraft,
     onCommit,
+    onStopMeasure,
     tool,
     onSelect,
   };
@@ -235,6 +237,7 @@ export function useCadCanvas(options: Options) {
       requestRender();
     };
     const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
       canvas.focus({ preventScroll: true });
       canvas.setPointerCapture(event.pointerId);
       touches.set(event.pointerId, local(event));
@@ -282,6 +285,10 @@ export function useCadCanvas(options: Options) {
     };
     const onPointerUp = (event: PointerEvent) => {
       touches.delete(event.pointerId);
+      if (event.button !== 0) {
+        drag = null;
+        return;
+      }
       const clicked = drag && !drag.moved;
       drag = null;
       if (!clicked || !viewRef.current) return;
@@ -317,19 +324,36 @@ export function useCadCanvas(options: Options) {
       setHover(null);
       setCursor(null);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
+    const keepArea = () => {
       const { measureMode: mode, onDraft: setDraft, onCommit: commit } = stateRef.current;
       const points = marksRef.current.draft;
-      if (event.key === 'Enter' && mode === 'area' && points.length >= 3) {
+      if (mode === 'area' && points.length >= 3) {
         const measure = { mode, points };
+        marksRef.current = { measures: [...marksRef.current.measures, measure], draft: [] };
+        commit(measure);
+        return;
+      }
+      marksRef.current = { ...marksRef.current, draft: [] };
+      setDraft([]);
+    };
+    const onContextMenu = (event: MouseEvent) => {
+      if (stateRef.current.tool !== 'measure') return;
+      event.preventDefault();
+      keepArea();
+      stateRef.current.onStopMeasure();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const { onCommit: commit } = stateRef.current;
+      const points = marksRef.current.draft;
+      if (event.key === 'Enter' && stateRef.current.measureMode === 'area' && points.length >= 3) {
+        const measure = { mode: stateRef.current.measureMode, points };
         marksRef.current = { measures: [...marksRef.current.measures, measure], draft: [] };
         commit(measure);
         return;
       }
       if (event.key !== 'Escape') return;
       stateRef.current.onSelect(null);
-      marksRef.current = { ...marksRef.current, draft: [] };
-      setDraft([]);
+      keepArea();
     };
 
     canvas.addEventListener('wheel', onWheel, { passive: false });
@@ -339,7 +363,9 @@ export function useCadCanvas(options: Options) {
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('pointerleave', onPointerLeave);
     canvas.addEventListener('keydown', onKeyDown);
+    canvas.addEventListener('contextmenu', onContextMenu);
     return () => {
+      canvas.removeEventListener('contextmenu', onContextMenu);
       canvas.removeEventListener('keydown', onKeyDown);
       observer.disconnect();
       canvas.removeEventListener('wheel', onWheel);
