@@ -12,10 +12,10 @@ import { track } from './track';
 
 /** Drawings shipped with the site: real files the viewer opens like any other. */
 const SAMPLES = [
-  { file: 'L1.dwg', size: '1.8 MB', title: 'Level 1', kind: 'Floor plan', wide: true },
-  { file: 'L2.dwg', size: '1.7 MB', title: 'Level 2', kind: 'Floor plan' },
-  { file: 'L3.dwg', size: '1.3 MB', title: 'Level 3', kind: 'Floor plan' },
-  { file: 'L4.dwg', size: '1.2 MB', title: 'Level 4', kind: 'Floor plan', wide: true },
+  { file: 'house-ground-floor.dxf', size: '116 KB', title: 'Ground floor plan', kind: 'Architectural · 1:50', wide: true },
+  { file: 'steel-moment-connection.dxf', size: '99 KB', title: 'Moment connection MC-2', kind: 'Structural · 1:10' },
+  { file: 'coupling-assembly.dxf', size: '104 KB', title: 'Flexible coupling FC-180', kind: 'Mechanical · 1:1' },
+  { file: 'site-layout.dxf', size: '148 KB', title: 'Orchard Close site layout', kind: 'Civil · 1:500', wide: true },
 ] as const;
 
 type Sample = (typeof SAMPLES)[number];
