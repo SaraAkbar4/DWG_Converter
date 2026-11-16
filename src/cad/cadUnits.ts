@@ -1,5 +1,24 @@
 const METERS_PER_FOOT = 0.3048;
 
+export const KNOWN_LENGTH_UNITS = ['m', 'mm', 'ft'] as const;
+export type KnownLengthUnit = (typeof KNOWN_LENGTH_UNITS)[number];
+
+const METERS_PER_KNOWN: Record<KnownLengthUnit, number> = {
+  m: 1,
+  mm: 0.001,
+  ft: METERS_PER_FOOT,
+};
+
+/** Metres of the real world represented by one drawing unit, from a measured segment and its known length. */
+export function metersPerDrawingUnit(
+  drawingLength: number,
+  knownLength: number,
+  unit: KnownLengthUnit,
+): number | null {
+  if (!(drawingLength > 0) || !(knownLength > 0)) return null;
+  return (knownLength * METERS_PER_KNOWN[unit]) / drawingLength;
+}
+
 function formatFeetInches(meters: number): string {
   const totalInches = Math.round((meters / METERS_PER_FOOT) * 12);
   const feet = Math.floor(totalInches / 12);

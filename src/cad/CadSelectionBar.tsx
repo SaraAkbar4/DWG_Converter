@@ -1,9 +1,11 @@
+import { Button, Input, Select, theme } from 'antd';
+import { useState, type RefObject } from 'react';
 import { useViewerTranslate } from './platform';
-import type { RefObject } from 'react';
 import { layerLabel } from './CadLayersList';
 import type { CadGroup } from './cadSelectionGroup';
 import { CadSelectionPill, cadPillIcons } from './CadSelectionPill';
-import { measureLabel, type CadMeasure } from './cadMeasure';
+import { measureLabel, type CadMeasure, type CadPoint } from './cadMeasure';
+import { KNOWN_LENGTH_UNITS, metersPerDrawingUnit, type KnownLengthUnit } from './cadUnits';
 import type { CadMeasureMode, CadTool } from './useCadCanvas';
 import type { CadDrawing, CadSelection } from './types';
 import { useCadSelectionDetails } from './useCadSelectionDetails';
@@ -17,6 +19,8 @@ type Props = {
   measure: Array<[number, number]>;
   saved: CadMeasure[];
   measureMode: CadMeasureMode;
+  /** Present when this sheet's scale can be set from a measured length. */
+  onCalibrate?: (metersPerUnit: number) => void;
   propertiesOpen: boolean;
   onToggleProperties: () => void;
   onZoomTo: () => void;
@@ -46,6 +50,8 @@ export function CadSelectionBar(props: Props) {
       area: 'Click the corners, then the first point again. Right-click to stop. It stays on this sheet until you close the viewer.',
       angle: 'Click three points. Right-click to stop. The angle stays until you close the viewer.',
     };
+    const distance =
+      measureMode === 'distance' ? pairLength(measure.length >= 2 ? measure : finished?.points) : 0;
     return (
       <CadSelectionPill
         title={t(`viewer3d.cadFloorPlan.measure.${measureMode}`, titles[measureMode])}
@@ -53,6 +59,11 @@ export function CadSelectionBar(props: Props) {
         actions={[]}
         onClose={props.onExitMeasure}
         avoidRef={props.avoidRef}
+        extra={
+          props.onCalibrate && distance > 0 ? (
+            <ScaleField drawingLength={distance} onCalibrate={props.onCalibrate} />
+          ) : undefined
+        }
       />
     );
   }
@@ -106,5 +117,62 @@ export function CadSelectionBar(props: Props) {
         },
       ]}
     />
+  );
+}
+
+function pairLength(points: CadPoint[] | undefined): number {
+  const start = points?.[0];
+  const end = points?.[1];
+  if (!start || !end) return 0;
+  return Math.hypot(end[0] - start[0], end[1] - start[1]);
+}
+
+function ScaleField({
+  drawingLength,
+  onCalibrate,
+}: {
+  drawingLength: number;
+  onCalibrate: (metersPerUnit: number) => void;
+}) {
+  const t = useViewerTranslate();
+  const { token } = theme.useToken();
+  const [known, setKnown] = useState('');
+  const [unit, setUnit] = useState<KnownLengthUnit>('m');
+  const metersPerUnit = metersPerDrawingUnit(drawingLength, Number(known), unit);
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (metersPerUnit != null) onCalibrate(metersPerUnit);
+      }}
+      style={{ display: 'flex', alignItems: 'center', gap: token.marginXXS }}
+    >
+      <span style={{ fontSize: token.fontSizeSM, color: token.colorTextSecondary, whiteSpace: 'nowrap' }}>
+        {t('viewer3d.cadFloorPlan.scale.thisIs', 'This is')}
+      </span>
+      <Input
+        size="small"
+        type="number"
+        inputMode="decimal"
+        min={0}
+        step="any"
+        value={known}
+        aria-label={t('viewer3d.cadFloorPlan.scale.knownLength', 'Real length')}
+        onChange={(event) => setKnown(event.target.value)}
+        style={{ width: 88 }}
+      />
+      <Select
+        size="small"
+        value={unit}
+        aria-label={t('viewer3d.cadFloorPlan.scale.unit', 'Length unit')}
+        popupMatchSelectWidth={false}
+        onChange={setUnit}
+        options={KNOWN_LENGTH_UNITS.map((value) => ({ value, label: value }))}
+        style={{ width: 72 }}
+      />
+      <Button htmlType="submit" type="primary" size="small" disabled={metersPerUnit == null}>
+        {t('viewer3d.cadFloorPlan.scale.set', 'Set scale')}
+      </Button>
+    </form>
   );
 }

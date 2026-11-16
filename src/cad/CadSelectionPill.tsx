@@ -21,6 +21,7 @@ type Props = {
   actions: CadPillAction[];
   onClose: () => void;
   avoidRef?: RefObject<HTMLElement | null>;
+  extra?: ReactNode;
 };
 
 function useBottomAvoiding(
@@ -57,7 +58,7 @@ export const cadPillIcons = {
   show: <Eye {...icon} />,
 };
 
-export function CadSelectionPill({ title, detail, actions, onClose, avoidRef }: Props) {
+export function CadSelectionPill({ title, detail, actions, onClose, avoidRef, extra }: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
   const ref = useRef<HTMLDivElement>(null);
@@ -89,6 +90,7 @@ export function CadSelectionPill({ title, detail, actions, onClose, avoidRef }: 
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
+        flexWrap: extra ? 'wrap' : 'nowrap',
         gap: token.marginXXS,
         maxWidth: `calc(100% - ${token.marginLG * 2}px)`,
         padding: `${token.paddingXS}px ${token.paddingXS}px ${token.paddingXS}px ${token.paddingLG}px`,
@@ -140,6 +142,9 @@ export function CadSelectionPill({ title, detail, actions, onClose, avoidRef }: 
         icon: <X {...icon} />,
         onClick: onClose,
       })}
+      {extra ? (
+        <div style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: token.marginXS }}>{extra}</div>
+      ) : null}
     </div>
   );
 }
