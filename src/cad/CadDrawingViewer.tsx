@@ -42,9 +42,11 @@ type Props = {
   onToolUsed: () => boolean;
   onMeasureMode: (mode: CadMeasureMode) => void;
   onMarks: (marks: SheetMarks | ((current: SheetMarks) => SheetMarks)) => void;
+  /** Present when the sheet's real-world scale can be set from a measured length (PDF plots). */
+  onCalibrate?: (metersPerUnit: number) => void;
 };
 
-export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onToolUsed, onMeasureMode, onMarks }: Props) {
+export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onToolUsed, onMeasureMode, onMarks, onCalibrate }: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
@@ -230,6 +232,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         measure={marks.draft}
         saved={marks.saved}
         measureMode={measureMode}
+        onCalibrate={onCalibrate}
         propertiesOpen={panel === 'properties'}
         onToggleProperties={() => togglePanel('properties')}
         onZoomTo={() => group?.bounds && canvas.zoomToBounds(group.bounds)}

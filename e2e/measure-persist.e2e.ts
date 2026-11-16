@@ -41,9 +41,17 @@ test('measurements stay on the sheet and in the export', async ({ page }) => {
   const kept = await bluePixels(page);
   expect(kept).toBeGreaterThan(before);
 
-  const downloadPromise = page.waitForEvent('download');
   await page.locator('header').getByRole('button', { name: /Export|^$/ }).filter({ has: page.locator('svg.lucide-download') }).click();
   await page.getByRole('menuitem', { name: /PNG/ }).click();
+  const pick = page.getByRole('dialog', { name: 'Choose an area to export' });
+  await expect(pick).toBeVisible();
+  const area = (await pick.boundingBox())!;
+  await page.mouse.move(area.x + area.width * 0.2, area.y + area.height * 0.25);
+  await page.mouse.down();
+  await page.mouse.move(area.x + area.width * 0.8, area.y + area.height * 0.8, { steps: 8 });
+  await page.mouse.up();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download PNG' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('studio-apartment.png');
   const stream = await download.createReadStream();

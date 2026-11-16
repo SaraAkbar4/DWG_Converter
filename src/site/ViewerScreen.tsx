@@ -9,7 +9,8 @@ import type { CadMeasureMode, CadTool } from '../cad/useCadCanvas';
 import type { ViewerTheme } from '../cad/platform';
 import type { DrawingDoc, DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
 import { TRIAL_URL, WORKSPACE_LOGIN_URL } from './content';
-import { exportPng } from './exportDrawing';
+import { exportPng, type PngRegion } from './exportDrawing';
+import { PngAreaPick } from './PngAreaPick';
 import styles from './site.module.css';
 import { openDrawingPicker } from './pickDrawing';
 import { track } from './track';
@@ -23,11 +24,12 @@ type Props = {
   theme: ViewerTheme;
   onToggleTheme: () => void;
   onClose: () => void;
+  onScale: (docIndex: number, sheetIndex: number, metersPerUnit: number) => void;
 };
 
 type ExportKind = 'png' | 'pdf';
 const EXPORTS: Array<{ key: ExportKind; label: string }> = [
-  { key: 'png', label: 'PNG image (current view)' },
+  { key: 'png', label: 'PNG image (choose an area)' },
   { key: 'pdf', label: 'PDF (whole sheet, A3)' },
 ];
 const icon = { size: 16, strokeWidth: 1.75 } as const;
@@ -104,6 +106,7 @@ export function ViewerScreen(props: Props) {
       return next;
     });
   const [signup, setSignup] = useState<SignupReason | null>(null);
+  const [pngCanvas, setPngCanvas] = useState<HTMLCanvasElement | null>(null);
   const toolUses = useRef(0);
   const toolsLocked = useRef(false);
   const noteToolUse = () => {
@@ -131,19 +134,33 @@ export function ViewerScreen(props: Props) {
   const runExport = (kind: ExportKind) => {
     track('export_clicked', { kind });
     if (kind === 'pdf') {
+      setPngCanvas(null);
       setSignup('export');
       return;
     }
     const canvas = stageRef.current?.querySelector('canvas');
-    if (!canvas) return;
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    if (pngExportsUsed() >= FREE_PNG_EXPORTS) {
+      setSignup('export');
+      return;
+    }
+    setPngCanvas(canvas);
+  };
+  const downloadPng = (region: PngRegion) => {
+    if (!pngCanvas) return;
     const used = pngExportsUsed();
     if (used >= FREE_PNG_EXPORTS) {
+      setPngCanvas(null);
       setSignup('export');
       return;
     }
     sessionStorage.setItem(PNG_EXPORT_KEY, String(used + 1));
-    exportPng(canvas, stem);
+    void exportPng(pngCanvas, stem, region);
+    setPngCanvas(null);
   };
+  useEffect(() => {
+    setPngCanvas(null);
+  }, [sheetKey]);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setGlimpse(false);
@@ -167,7 +184,7 @@ export function ViewerScreen(props: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept=".dwg,.dxf,.zip"
+        accept=".dwg,.dxf,.zip,.pdf"
         multiple
         hidden
         onChange={(event) => {
@@ -299,8 +316,10 @@ export function ViewerScreen(props: Props) {
           onToolUsed={noteToolUse}
           onMeasureMode={setMeasureMode}
           onMarks={setMarks}
+          onCalibrate={doc.info.format === 'PDF' ? (metersPerUnit) => props.onScale(docIndex, sheetIndex, metersPerUnit) : undefined}
         />
       </motion.div>
+      {pngCanvas && <PngAreaPick canvas={pngCanvas} onDownload={downloadPng} onCancel={() => setPngCanvas(null)} />}
       {signup && (
         <div className={styles.gate} role="presentation" onClick={() => setSignup(null)}>
           <div

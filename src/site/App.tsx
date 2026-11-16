@@ -18,7 +18,7 @@ const ViewerScreen = dynamic(fresh(() => import('./ViewerScreen').then((module) 
 
 export function App({ hero = HOME_HERO }: { hero?: Hero }) {
   const { theme, toggleTheme } = useSiteTheme();
-  const { docs, loading, error, open, closeAll, cancel, dismissError } = useDrawingFiles();
+  const { docs, loading, error, open, closeAll, cancel, setScale, dismissError } = useDrawingFiles();
   const opened = useRef(0);
 
   useEffect(startAnalytics, []);
@@ -63,6 +63,7 @@ export function App({ hero = HOME_HERO }: { hero?: Hero }) {
               theme={theme}
               onToggleTheme={toggleTheme}
               onClose={closeAll}
+              onScale={setScale}
             />
           ) : (
             <Landing
