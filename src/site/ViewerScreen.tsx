@@ -24,6 +24,7 @@ type Props = {
   theme: ViewerTheme;
   onToggleTheme: () => void;
   onClose: () => void;
+  onCancel: () => void;
   onScale: (docIndex: number, sheetIndex: number, metersPerUnit: number) => void;
 };
 
@@ -36,6 +37,12 @@ const icon = { size: 16, strokeWidth: 1.75 } as const;
 const EMPTY_MARKS = { saved: [] as CadMeasure[], draft: [] as CadPoint[] };
 type SheetMarks = { saved: CadMeasure[]; draft: CadPoint[] };
 const formatSize = (bytes: number) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
+const OPENING_STAGE: Record<DrawingLoading['stage'], string> = {
+  reading: 'Reading the file',
+  parsing: 'Reading the drawing',
+  building: 'Building the drawing',
+  rendering: 'Drawing',
+};
 /** Five toolbar uses are free. The next one is refused and the signup box stays in the way. */
 const TOOL_GATE = 5;
 const FREE_PNG_EXPORTS = 3;
@@ -81,7 +88,6 @@ export function ViewerScreen(props: Props) {
     document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
   const closeDoc = () => props.onClose();
   const pickFiles = () => openDrawingPicker(inputRef.current);
-  const [glimpse, setGlimpse] = useState(true);
   // Phones start with the drawings sheet closed so the drawing and toolbar are visible first.
   const [leftOpen, setLeftOpen] = useState(() => !window.matchMedia('(max-width: 768px)').matches);
   const leftClosedByUser = useRef(false);
@@ -161,15 +167,6 @@ export function ViewerScreen(props: Props) {
   useEffect(() => {
     setPngCanvas(null);
   }, [sheetKey]);
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setGlimpse(false);
-      return;
-    }
-    setGlimpse(true);
-    const id = window.setTimeout(() => setGlimpse(false), 2200);
-    return () => window.clearTimeout(id);
-  }, [doc.info.name]);
   const commands: CadCommand[] = [
     ...EXPORTS.map(({ key, label }) => ({ label: `Export ${label}`, run: () => runExport(key) })),
     { label: 'Open another drawing', shortcut: 'O', run: pickFiles },
@@ -193,7 +190,7 @@ export function ViewerScreen(props: Props) {
           event.target.value = '';
         }}
       />
-      <header className={styles.viewerBar} hidden={glimpse}>
+      <header className={styles.viewerBar}>
         <button type="button" className={styles.backButton} onClick={closeDoc} aria-label="Back">
           <ChevronLeft size={20} strokeWidth={2} />
         </button>
@@ -236,7 +233,7 @@ export function ViewerScreen(props: Props) {
         ref={stageRef}
         layoutId="stage"
         className={styles.viewerStage}
-        data-glimpse={glimpse}
+        data-opening={loading ? 'true' : undefined}
         data-left-rail={leftOpen ? 'open' : 'closed'}
         transition={{ type: 'spring', bounce: 0, duration: 0.45 }}
       >
@@ -318,6 +315,16 @@ export function ViewerScreen(props: Props) {
           onMarks={setMarks}
           onCalibrate={doc.info.format === 'PDF' ? (metersPerUnit) => props.onScale(docIndex, sheetIndex, metersPerUnit) : undefined}
         />
+        {loading && (
+          <div className={styles.viewerLoading} role="status" aria-live="polite">
+            <span className={styles.viewerSpinner} aria-hidden />
+            <strong>Opening {loading.fileName}</strong>
+            <span>{OPENING_STAGE[loading.stage]}</span>
+            <button type="button" className={styles.pillGhost} onClick={props.onCancel}>
+              Cancel
+            </button>
+          </div>
+        )}
       </motion.div>
       {pngCanvas && <PngAreaPick canvas={pngCanvas} onDownload={downloadPng} onCancel={() => setPngCanvas(null)} />}
       {signup && (
@@ -343,16 +350,6 @@ export function ViewerScreen(props: Props) {
             </a>
           </div>
         </div>
-      )}
-      {glimpse && (
-        <button type="button" className={styles.glimpse} onClick={() => setGlimpse(false)} aria-label="Show the drawing">
-          <p>{loading ? `Opening ${loading.fileName}` : doc.info.name}</p>
-          <p>
-            {[doc.info.format, doc.info.version, formatSize(doc.info.size), `${sheet.drawing.entities.length.toLocaleString()} objects`]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        </button>
       )}
     </div>
   );

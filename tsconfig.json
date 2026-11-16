@@ -32,10 +32,13 @@
     "esModuleInterop": true
   },
   "include": [
+    ".next-pdf/types/**/*.ts",
+    ".next-preview/types/**/*.ts",
     ".next/types/**/*.ts",
+    "e2e",
     "next-env.d.ts",
-    "src",
-    ".next-preview/types/**/*.ts"
+    "playwright.config.ts",
+    "src"
   ],
   "exclude": [
     "node_modules"

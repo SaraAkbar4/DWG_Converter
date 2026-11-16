@@ -990,28 +990,82 @@
   }
 }
 
-.viewerStage[data-glimpse='true'] {
-  filter: blur(18px);
-  transform: scale(1.08);
-  transform-origin: center;
-}
-
-.glimpse {
+/* Covers the drawing only. Header sits outside this stage; sidebars paint above it. */
+.viewerLoading {
   position: absolute;
-  z-index: 2;
+  z-index: 1001;
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 20px 22px 28px;
-  border: 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--tile) 88%, transparent) 0 18%, transparent 46%);
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: #0f141b;
+  color: #dde4ee;
+  text-align: center;
+}
+
+.viewerScreen[data-viewer-theme='light'] .viewerLoading {
+  background: #f5f7fa;
+  color: #1c2330;
+}
+
+.viewerLoading strong {
+  max-width: 36ch;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.viewerLoading > span:not(.viewerSpinner) {
   color: var(--text-muted);
-  font: inherit;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  text-align: left;
-  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.viewerLoading .pillGhost {
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 0 18px;
+  font-size: 0.875rem;
+}
+
+.viewerSpinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: viewer-spin 0.7s linear infinite;
+}
+
+@keyframes viewer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The scrim fills the drawing. Padding keeps the message in the open canvas, clear of the sidebars. */
+.viewerStage[data-left-rail='open'] .viewerLoading {
+  padding-left: calc(16px + min(240px, 100% - 48px) + 16px);
+}
+
+.viewerStage:has([data-viewer-side-panel='right']) .viewerLoading {
+  padding-right: calc(16px + min(340px, 100% - 32px) + 16px);
+}
+
+.viewerStage[data-opening='true'] .leftRail {
+  background: var(--bg-raised);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* The phone toolbar otherwise stacks above this scrim. */
+.viewerStage[data-opening='true'] :global(.potree-toolbar-left.potree-toolbar-horizontal),
+.viewerStage[data-opening='true'] :global(.potree-toolbar-right) {
+  z-index: 1000;
 }
 
 .leftRailHeader {
@@ -1153,17 +1207,6 @@
   font-weight: 600;
 }
 
-.glimpse p {
-  margin: 0;
-}
-
-.glimpse p + p {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
-}
-
 @media (max-width: 900px) {
   .nav {
     display: none;
@@ -1211,6 +1254,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .viewerSpinner {
+    animation: none;
+    border-color: var(--primary);
+    border-right-color: transparent;
+  }
+
   .pill,
   .pillGhost,
   .pillSmall,
@@ -1529,6 +1578,14 @@
 
 /* Phones keep the drawings list on the left, starting below the toolbar tips. */
 @media (max-width: 768px) {
+  .viewerStage[data-left-rail='open'] .viewerLoading {
+    padding-left: calc(12px + min(220px, 100% - 56px) + 16px);
+  }
+
+  .viewerStage:has([data-viewer-side-panel='right']) .viewerLoading {
+    padding-right: calc(8px + min(240px, 100% - 72px) + 16px);
+  }
+
   .leftRail {
     top: 96px;
     bottom: 12px;

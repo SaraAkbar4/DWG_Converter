@@ -63,6 +63,7 @@ export function App({ hero = HOME_HERO }: { hero?: Hero }) {
               theme={theme}
               onToggleTheme={toggleTheme}
               onClose={closeAll}
+              onCancel={cancel}
               onScale={setScale}
             />
           ) : (
