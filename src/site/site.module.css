@@ -108,6 +108,13 @@
   box-shadow: 0 1px 0 var(--border);
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
 .header img {
   display: block;
   /* Letterforms sit high in the logo file; the p descender is only a hairline. */
@@ -609,54 +616,6 @@
   min-height: 100%;
 }
 
-.legalBar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  height: 48px;
-  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
-  background: var(--bar);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: 0 1px 0 var(--border);
-}
-
-.legalBack {
-  grid-column: 1;
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.legalBack:hover {
-  background: var(--surface);
-}
-
-.legalBrand {
-  grid-column: 2;
-  justify-self: center;
-  display: flex;
-  align-items: center;
-  line-height: 0;
-  color: var(--text);
-}
-
-.legalLogo {
-  display: block;
-  height: 22px;
-  width: auto;
-  transform: translateY(1px);
-}
-
 .legal {
   max-width: 720px;
   margin: 0 auto;
@@ -666,11 +625,12 @@
 }
 
 .legal h1 {
-  margin: 8px 0 12px;
-  font-size: clamp(2rem, 5vw, 3rem);
+  margin: 20px 0 40px;
+  font-size: clamp(2.5rem, 5.5vw, 3.25rem);
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-align: left;
 }
 
 .legal h2 {
@@ -1162,7 +1122,6 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .header,
-  .legalBar,
   .menuPanel {
     background: var(--bg-raised);
     backdrop-filter: none;
@@ -1171,8 +1130,7 @@
 }
 
 @media (prefers-contrast: more) {
-  .header,
-  .legalBar {
+  .header {
     background: var(--bg-raised);
     box-shadow: 0 1px 0 var(--text);
   }

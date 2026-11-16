@@ -4,28 +4,23 @@ import '@ant-design/v5-patch-for-react-19';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { MotionConfig } from 'motion/react';
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
-import { ViewerThemeContext, type ViewerTheme } from '../cad/platform';
+import { useEffect, useRef } from 'react';
+import { ViewerThemeContext } from '../cad/platform';
 import { useDrawingFiles } from '../convert/useDrawingFile';
-import { HOME_HERO, THEME_STORAGE_KEY, type Hero } from './content';
+import { HOME_HERO, type Hero } from './content';
 import { Landing } from './Landing';
 import { fresh } from './fresh';
 import { startAnalytics, track } from './track';
+import { useSiteTheme } from './useSiteTheme';
 
 // Loaded on demand so the landing page stays light.
 const ViewerScreen = dynamic(fresh(() => import('./ViewerScreen').then((module) => module.ViewerScreen), () => <></>), { ssr: false });
 
 export function App({ hero = HOME_HERO }: { hero?: Hero }) {
-  const [theme, setTheme] = useState<ViewerTheme>('dark');
+  const { theme, toggleTheme } = useSiteTheme();
   const { docs, loading, error, open, closeAll, cancel, dismissError } = useDrawingFiles();
   const opened = useRef(0);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    const next = stored === 'light' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    setTheme(next);
-  }, []);
   useEffect(startAnalytics, []);
   useEffect(() => {
     // Production only: in development the cache would serve stale code.
@@ -43,14 +38,6 @@ export function App({ hero = HOME_HERO }: { hero?: Hero }) {
   useEffect(() => {
     if (error) track(error.code === 'too_large' ? 'file_too_large' : 'parse_failed', { code: error.code });
   }, [error]);
-
-  const toggleTheme = () =>
-    setTheme((current) => {
-      const next = current === 'dark' ? 'light' : 'dark';
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-      document.documentElement.dataset.theme = next;
-      return next;
-    });
 
   return (
     <ConfigProvider
