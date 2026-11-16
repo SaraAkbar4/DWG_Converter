@@ -225,6 +225,23 @@
   color: inherit;
 }
 
+/* Keeps the arrow at 10px so the label stays centred, and gives it a larger tap target. */
+.potree-toolbar-horizontal-chevron-hit {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.potree-toolbar-horizontal-chevron-hit::before {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+
 /* Balances the chevron so the label stays centred under the icon. */
 .potree-toolbar-horizontal-chevron-spacer {
   width: 10px;

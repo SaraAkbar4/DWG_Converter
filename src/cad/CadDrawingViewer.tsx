@@ -211,8 +211,13 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
           onTool('select');
           onMarks(keepDraft(measureMode));
         }}
+        onDeactivateSelect={() => {
+          setSelection(null);
+          onTool('pan');
+        }}
         measureMode={measureMode}
         onMeasure={startMeasure}
+        onDeactivateMeasure={stopMeasure}
         panel={panel}
         onTogglePanel={togglePanel}
       />

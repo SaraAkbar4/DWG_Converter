@@ -110,6 +110,8 @@
 
 .header img {
   display: block;
+  /* Letterforms sit high in the logo file; the p descender is only a hairline. */
+  transform: translateY(1px);
 }
 
 .nav {
@@ -652,6 +654,7 @@
   display: block;
   height: 22px;
   width: auto;
+  transform: translateY(1px);
 }
 
 .legal {

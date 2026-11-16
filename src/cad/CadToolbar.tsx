@@ -23,8 +23,10 @@ type Props = {
   tool: CadTool;
   selectMode: CadSelectMode;
   onSelectMode: (mode: CadSelectMode) => void;
+  onDeactivateSelect: () => void;
   measureMode: CadMeasureMode;
   onMeasure: (mode: CadMeasureMode) => void;
+  onDeactivateMeasure: () => void;
   panel: CadPanel;
   onTogglePanel: (panel: Exclude<CadPanel, null>) => void;
 };
@@ -81,6 +83,7 @@ export function CadToolbar(props: Props) {
           title={t('viewer3d.cadFloorPlan.selectBy', 'Select by')}
           icon={currentMode.icon}
           active={props.tool === 'select'}
+          onDeactivate={props.onDeactivateSelect}
           menu={{ options: selectModes, value: props.selectMode, onSelect: props.onSelectMode }}
         />
         <CadToolbarItem
@@ -88,6 +91,7 @@ export function CadToolbar(props: Props) {
           title={t('viewer3d.cadFloorPlan.measure', 'Measure')}
           icon={<Ruler {...icon} />}
           active={props.tool === 'measure'}
+          onDeactivate={props.onDeactivateMeasure}
           menu={{ options: measureModes, value: props.measureMode, onSelect: props.onMeasure }}
         />
         <span className="potree-toolbar-horizontal-divider" />

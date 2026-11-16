@@ -1,7 +1,7 @@
 import { CheckOutlined } from '@ant-design/icons';
 import { Dropdown, theme } from 'antd';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { getToolbarSubmenuStyle, useViewerTheme } from './platform';
 
 export type CadMenuOption<T extends string> = {
@@ -17,6 +17,8 @@ type Props<T extends string> = {
   active?: boolean;
   title?: string;
   onClick?: () => void;
+  /** Turns this tool off when its button is clicked while it is already on. */
+  onDeactivate?: () => void;
   menu?: { options: CadMenuOption<T>[]; value: T; onSelect: (value: T) => void };
 };
 
@@ -26,17 +28,35 @@ export function CadToolbarItem<T extends string>({
   active,
   title,
   onClick,
+  onDeactivate,
   menu,
 }: Props<T>) {
   const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
   const [open, setOpen] = useState(false);
+  const chevronRef = useRef<HTMLSpanElement>(null);
   const submenuStyle = useMemo(() => getToolbarSubmenuStyle(token), [token]);
   const chevron = open ? (
     <ChevronUp size={10} strokeWidth={2.75} className="potree-toolbar-horizontal-chevron" />
   ) : (
     <ChevronDown size={10} strokeWidth={2.75} className="potree-toolbar-horizontal-chevron" />
   );
+  const onTriggerClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (menu && chevronRef.current?.contains(event.target as Node)) {
+      setOpen((value) => !value);
+      return;
+    }
+    if (active && onDeactivate) {
+      setOpen(false);
+      onDeactivate();
+      return;
+    }
+    if (menu) {
+      setOpen((value) => !value);
+      return;
+    }
+    onClick?.();
+  };
 
   const trigger = (
     <button
@@ -46,7 +66,7 @@ export function CadToolbarItem<T extends string>({
       aria-pressed={active}
       aria-haspopup={menu ? 'menu' : undefined}
       aria-expanded={menu ? open : undefined}
-      onClick={menu ? undefined : onClick}
+      onClick={onTriggerClick}
     >
       <span className="potree-toolbar-horizontal-icon-row">
         <span className="potree-toolbar-horizontal-icon">{icon}</span>
@@ -54,7 +74,19 @@ export function CadToolbarItem<T extends string>({
       <span className="potree-toolbar-horizontal-label-row">
         {menu ? <span className="potree-toolbar-horizontal-chevron-spacer" aria-hidden /> : null}
         <span className="potree-toolbar-horizontal-label">{label}</span>
-        {menu ? chevron : null}
+        {menu ? (
+          <span
+            ref={chevronRef}
+            className="potree-toolbar-horizontal-chevron-hit"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen((value) => !value);
+            }}
+          >
+            {chevron}
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -77,7 +109,8 @@ export function CadToolbarItem<T extends string>({
             className={`potree-toolbar-horizontal-submenu-item${selected ? ' is-selected' : ''}`}
             disabled={option.disabled}
             onClick={() => {
-              menu.onSelect(option.value);
+              if (selected && active && onDeactivate) onDeactivate();
+              else menu.onSelect(option.value);
               setOpen(false);
             }}
           >
@@ -99,7 +132,7 @@ export function CadToolbarItem<T extends string>({
     >
       {submenu ? (
         <Dropdown
-          trigger={['click']}
+          trigger={[]}
           open={open}
           placement="bottom"
           destroyOnHidden
