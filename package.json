@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "wasm": "mkdir -p public/wasm && cp node_modules/@mlightcad/libredwg-web/wasm/libredwg-web.wasm public/wasm/",
+    "wasm": "mkdir -p public/wasm public/pdfjs && cp node_modules/@mlightcad/libredwg-web/wasm/libredwg-web.wasm public/wasm/ && rm -rf public/pdfjs/standard_fonts && cp -R node_modules/pdfjs-dist/standard_fonts public/pdfjs/standard_fonts",
     "predev": "pnpm wasm",
     "prebuild": "pnpm wasm",
     "dev": "next dev -p 8020",
@@ -23,6 +23,7 @@
     "lucide-react": "^1.72.0",
     "motion": "^14.12.0",
     "next": "^15.5.29",
+    "pdfjs-dist": "^6.5.438",
     "posthog-js": "^1.448.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

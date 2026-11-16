@@ -66,6 +66,7 @@ return that shape from another parser in `worker.ts`; nothing else changes.
 ## Supported
 
 - DWG from AutoCAD R13 to 2018+, and text (ASCII) DXF. Model space and paper-space layouts.
+- A PDF opens only when a DWG is embedded in it. A plotted PDF, with only lines and text, does not.
 - Lines, polylines (with bulges), arcs, circles, ellipses, splines, solid and pattern hatches
   (pattern hatches as outlines), text, MTEXT, attributes, dimensions, leaders and nested blocks.
 
@@ -74,7 +75,7 @@ return that shape from another parser in `worker.ts`; nothing else changes.
 - Pan, wheel and pinch zoom, fit; select by object, layer or block; properties; layers; search.
 - Measure distance, area and angle, snapping to nearby vertices.
 - Model and layout tabs; several drawings open at once; zip archives are unpacked in the browser.
-- Export: PNG (current view) and PDF.
+- Export: PNG (drag to choose an area of the current view) and PDF.
 - Command palette with every action and its shortcut: Cmd/Ctrl+K or `?`.
 
 ## Pages and SEO

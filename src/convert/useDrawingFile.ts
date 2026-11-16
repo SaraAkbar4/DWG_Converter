@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PdfExtractFailure, extractEmbeddedDwgs, isPdf } from './pdfEmbed';
+import { extractPdfVectors } from './pdfVector';
 import type { FailureCode, FileInfo, Sheet, Stage, WorkerMessage, WorkerRequest } from './protocol';
 import { unzipDrawings } from './unzip';
 
@@ -64,10 +66,60 @@ export function useDrawingFiles() {
       const run = runRef.current;
       setError(null);
       const limits = deviceLimits();
-      const files = (await Promise.all(picked.map((file) => (/\.zip$/i.test(file.name) ? unzipDrawings(file) : [file])))).flat();
-      const firstName = picked[0]?.name ?? '';
-      if (!files.length && picked.length) {
-        setError({ fileName: firstName, code: 'unsupported', message: 'This zip archive has no DWG or DXF drawing inside.' });
+      const files: File[] = [];
+      const ready: DrawingDoc[] = [];
+      let blocked: DrawingFailure | null = null;
+      let emptyContainer: DrawingFailure | null = null;
+      for (const file of picked) {
+        if (run !== runRef.current) return;
+        try {
+          if (/\.zip$/i.test(file.name)) {
+            const drawings = await unzipDrawings(file);
+            if (run !== runRef.current) return;
+            if (!drawings.length && !emptyContainer) {
+              emptyContainer = { fileName: file.name, code: 'unsupported', message: 'This zip archive has no DWG or DXF drawing inside.' };
+            }
+            files.push(...drawings);
+            continue;
+          }
+          if (await isPdf(file)) {
+            if (run !== runRef.current) return;
+            if (file.size > limits.dwg) {
+              throw new Failure('too_large', `This drawing is ${Math.round(file.size / MB)} MB. On this device the browser can open up to about ${Math.round(limits.dwg / MB)} MB.`);
+            }
+            setLoading({ fileName: file.name, stage: 'reading' });
+            const drawings = await extractEmbeddedDwgs(file);
+            if (run !== runRef.current) return;
+            if (drawings.length) {
+              files.push(...drawings);
+              continue;
+            }
+            // No DWG attached: convert what the PDF paints. A scan with no vectors is refused here.
+            setLoading({ fileName: file.name, stage: 'parsing' });
+            const converted = await extractPdfVectors(file);
+            if (run !== runRef.current) return;
+            ready.push(converted);
+            continue;
+          }
+          files.push(file);
+        } catch (failure) {
+          if (run !== runRef.current) return;
+          blocked =
+            failure instanceof Failure || failure instanceof PdfExtractFailure
+              ? { fileName: file.name, code: failure.code, message: failure.message }
+              : { fileName: file.name, code: 'corrupt', message: 'This file could not be opened.' };
+        }
+      }
+      if (run !== runRef.current) return;
+      if (ready.length) {
+        const room = Math.max(0, limits.open - countRef.current);
+        setDocs((current) => [...current, ...ready.slice(0, room)]);
+        if (ready.length > room) blocked ??= { fileName: ready[room]!.info.name, code: 'too_large', message: `Up to ${limits.open} drawings can be open at once on this device. Close one to open another.` };
+      }
+      if (blocked) setError(blocked);
+      else if (!files.length && emptyContainer) setError(emptyContainer);
+      else if (!files.length && !ready.length && picked.length) {
+        setError({ fileName: picked[0]?.name ?? '', code: 'unsupported', message: 'This zip archive has no DWG or DXF drawing inside.' });
       }
       for (const [index, file] of files.entries()) {
         if (run !== runRef.current) return;
@@ -100,5 +152,17 @@ export function useDrawingFiles() {
 
   const close = useCallback((index: number) => setDocs((current) => current.filter((_, i) => i !== index)), []);
   const closeAll = useCallback(() => setDocs([]), []);
-  return { docs, loading, error, open, close, closeAll, cancel, dismissError: useCallback(() => setError(null), []) };
+  /** Sets the real-world size of one sheet, for PDFs whose plot scale could not be read. */
+  const setScale = useCallback(
+    (docIndex: number, sheetIndex: number, metersPerUnit: number) =>
+      setDocs((current) =>
+        current.map((doc, i) =>
+          i !== docIndex
+            ? doc
+            : { ...doc, sheets: doc.sheets.map((sheet, j) => (j !== sheetIndex ? sheet : { ...sheet, drawing: { ...sheet.drawing, meters_per_unit: metersPerUnit, units: 'mm' } })) },
+        ),
+      ),
+    [],
+  );
+  return { docs, loading, error, open, close, closeAll, cancel, setScale, dismissError: useCallback(() => setError(null), []) };
 }

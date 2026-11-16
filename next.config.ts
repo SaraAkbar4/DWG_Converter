@@ -21,7 +21,8 @@ const config: NextConfig = {
   skipTrailingSlashRedirect: true,
   webpack: (webpackConfig) => {
     // The DWG engine's loader also targets Node; these modules never run in the browser.
-    webpackConfig.resolve.fallback = { ...webpackConfig.resolve.fallback, module: false, fs: false, path: false, url: false };
+    webpackConfig.resolve.alias = { ...webpackConfig.resolve.alias, canvas: false };
+    webpackConfig.resolve.fallback = { ...webpackConfig.resolve.fallback, module: false, fs: false, path: false, url: false, canvas: false };
     return webpackConfig;
   },
 };

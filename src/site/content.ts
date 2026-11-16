@@ -16,7 +16,7 @@ export const FAQ = [
   {
     question: 'Which files are supported?',
     answer:
-      'DWG files from AutoCAD R13 to 2018 and later, and text (ASCII) DXF files. Binary DXF and password-protected drawings are not supported.',
+      'DWG files from AutoCAD R13 to 2018 and later, and text (ASCII) DXF files. Binary DXF and password-protected drawings are not supported. A PDF opens only when a DWG is embedded in it.',
   },
   {
     question: 'Is it free?',
@@ -25,12 +25,12 @@ export const FAQ = [
   {
     question: 'How large a drawing can I open?',
     answer:
-      'DWG and DXF files up to 50 MB. For heavier files, talk to Kodifly.',
+      'DWG and DXF files up to 50 MB, and PDFs that were exported from CAD (vector PDFs). Scanned PDFs cannot be converted.',
   },
 ] as const;
 
 export const STEPS = [
-  { title: 'Drop your drawing', body: 'Pick a DWG or DXF file, or drag it anywhere on the page.' },
+  { title: 'Drop your drawing', body: 'Pick a DWG, DXF or vector PDF, or drag it anywhere on the page.' },
   { title: 'It opens on your device', body: 'Your browser reads the file itself. Nothing is sent anywhere.' },
   { title: 'Explore it', body: 'Pan and zoom, switch layers on and off, search labels, measure and export.' },
 ] as const;

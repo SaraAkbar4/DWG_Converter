@@ -6,6 +6,9 @@ import { arcPoints, bulgePoints, splinePoints } from '../src/convert/curves';
 import { parseDxf } from '../src/convert/dxf';
 import { extractDrawings } from '../src/convert/extract';
 import { mtextParagraphAlign, parseRoomTag, plainMText, plainText } from '../src/convert/text';
+import { pdfBytes } from './pdfFixture';
+
+const pdfFile = (name: string, payload?: string) => new File([pdfBytes(name, payload)], 'sheet.pdf', { type: 'application/pdf' });
 
 describe('colours', () => {
   test('fixed and computed AutoCAD colour indices', () => {
@@ -77,6 +80,24 @@ describe('sample drawing', () => {
     expect(minY).toBeLessThan(0);
     expect(maxX).toBeGreaterThan(9000);
     expect(maxY).toBeGreaterThan(6000);
+  });
+});
+
+describe('embedded drawings in a PDF', () => {
+  test('returns a DWG stored inside the PDF', async () => {
+    const { extractEmbeddedDwgs } = await import('../src/convert/pdfEmbed');
+    const [drawing, ...rest] = await extractEmbeddedDwgs(pdfFile('plan.dwg', 'AC1032-drawing'));
+    expect(rest).toHaveLength(0);
+    expect(drawing!.name).toBe('plan.dwg');
+    expect(await drawing!.text()).toBe('AC1032-drawing');
+  });
+  test('ignores an attachment that is not a DWG', async () => {
+    const { extractEmbeddedDwgs } = await import('../src/convert/pdfEmbed');
+    expect(await extractEmbeddedDwgs(pdfFile('notes.txt', 'hello'))).toEqual([]);
+  });
+  test('returns nothing when the PDF has no attachments', async () => {
+    const { extractEmbeddedDwgs } = await import('../src/convert/pdfEmbed');
+    expect(await extractEmbeddedDwgs(pdfFile('unused'))).toEqual([]);
   });
 });
 

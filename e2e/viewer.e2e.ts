@@ -2,6 +2,7 @@ import { closeSync, ftruncateSync, openSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { pdfBytes, scanPdfBytes, vectorPdfBytes } from '../tests/pdfFixture';
 
 const sample = readFileSync('public/samples/studio-apartment.dxf');
 
@@ -37,10 +38,38 @@ test('open the sample, use the tools, and export', async ({ page }) => {
   await page.keyboard.press('Escape');
 
   await page.locator('header').getByRole('button', { name: /Export|^$/ }).filter({ has: page.locator('svg.lucide-download') }).click();
-  const download = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: /PNG/ }).click();
+  const pick = page.getByRole('dialog', { name: 'Choose an area to export' });
+  await expect(pick).toBeVisible();
+  const area = (await pick.boundingBox())!;
+  await page.mouse.move(area.x + area.width * 0.25, area.y + area.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.move(area.x + area.width * 0.75, area.y + area.height * 0.75, { steps: 8 });
+  await page.mouse.up();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download PNG' }).click();
   expect((await download).suggestedFilename()).toBe('studio-apartment.png');
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('a PDF opens the DWG embedded in it', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Drop a DWG, DXF, or a PDF that contains the drawing')).toBeVisible();
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'plot.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from(pdfBytes('notes.txt', 'hello')),
+  });
+  await expect(page.getByText('This file could not be opened')).toBeVisible();
+  await expect(page.locator('main')).toContainText('This PDF has no drawing in it.');
+
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'carry.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from(pdfBytes('plan.dwg', 'AC1032-not-a-real-drawing')),
+  });
+  // LibreDWG accepts this header, so the reader runs and reports an empty drawing.
+  await expect(page.locator('main')).toContainText('This drawing has nothing to display.');
 });
 
 test('a file that is not a drawing gets a clear message', async ({ page }) => {
@@ -94,4 +123,17 @@ test('search landing pages have their own heading', async ({ page }) => {
   await page.goto('/open-dwg-without-autocad');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('without AutoCAD');
   await expect(page).toHaveTitle(/Open a DWG file without AutoCAD/);
+});
+
+test('a vector PDF is converted and opens in the viewer', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'plan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(vectorPdfBytes()) });
+  await expect(page.getByRole('img', { name: 'Vector drawing' })).toBeVisible();
+  await expect(page.locator('header')).toContainText('1 page');
+});
+
+test('a scanned PDF with no vectors is refused with a clear message', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(scanPdfBytes()) });
+  await expect(page.locator('main')).toContainText('scanned image');
 });

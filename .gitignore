@@ -7,3 +7,4 @@ public/wasm
 tests/fixtures/_local-*
 test-results
 playwright-report
+public/pdfjs

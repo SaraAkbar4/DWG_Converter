@@ -97,7 +97,7 @@ function DropZone({ loading, error, onFiles, onCancel }: Omit<Props, 'hero' | 't
       <input
         ref={inputRef}
         type="file"
-        accept=".dwg,.dxf,.zip"
+        accept=".dwg,.dxf,.zip,.pdf"
         multiple
         hidden
         onChange={(event) => {
@@ -132,8 +132,8 @@ function DropZone({ loading, error, onFiles, onCancel }: Omit<Props, 'hero' | 't
       ) : (
         <div className={styles.dropBody}>
           <FileUp size={40} strokeWidth={1.25} className={styles.dropIcon} />
-          <strong>{dragging ? 'Drop it to open' : 'Drop a DWG or DXF file here'}</strong>
-          <p className={styles.dropLimit}>DWG and DXF up to 50 MB</p>
+          <strong>{dragging ? 'Drop it to open' : 'Drop a DWG, DXF, or a PDF that contains the drawing'}</strong>
+          <p className={styles.dropLimit}>DWG, DXF and vector PDF up to 50 MB</p>
           <div className={styles.dropActions}>
             <button type="button" className={styles.pill} onClick={pick}>
               Choose a file
