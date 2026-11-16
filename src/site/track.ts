@@ -5,13 +5,19 @@ const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
 const UI_HOST = HOST.replace('.i.posthog.com', '.posthog.com');
 let ready = false;
 
+const PRODUCTION = process.env.NODE_ENV === 'production';
+
+const localHost = (hostname: string) =>
+  hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.endsWith('.local');
+
 /**
- * Starts PostHog once, in the browser, when a project key is set. Autocapture stays off.
+ * Starts PostHog once, in the browser, on a production build when a project key is set.
+ * Local and development sessions are never sent. Autocapture stays off.
  * The recorder ships inside the page so a blocked script cannot stop the replay.
  * The drawing canvas is included, so a replay shows the file the visitor is viewing.
  */
 export function startAnalytics() {
-  if (ready || !KEY || typeof window === 'undefined') return;
+  if (ready || !PRODUCTION || !KEY || typeof window === 'undefined' || localHost(window.location.hostname)) return;
   ready = true;
   posthog.init(KEY, {
     api_host: '/ingest',

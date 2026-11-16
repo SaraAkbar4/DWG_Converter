@@ -12,8 +12,15 @@ const drop = (headers: Headers, names: string[]) => {
   for (const name of names) headers.delete(name);
 };
 
+const localHost = (hostname: string) =>
+  hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.endsWith('.local');
+
 /** Forwards /ingest to PostHog. Next's rewrite proxy drops the trailing slash and the session never arrives. */
 async function proxy(request: NextRequest) {
+  // Local and development traffic stays on this machine. Only a deployed production build forwards sessions.
+  if (process.env.NODE_ENV !== 'production' || localHost(request.nextUrl.hostname)) {
+    return new NextResponse(null, { status: 204 });
+  }
   const url = request.nextUrl;
   let path = url.pathname.replace(/^\/ingest/, '') || '/';
   if (!path.startsWith('/')) path = `/${path}`;
