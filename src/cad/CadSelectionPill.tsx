@@ -24,7 +24,7 @@ type Props = {
   extra?: ReactNode;
 };
 
-function useBottomAvoiding(
+export function useBottomAvoiding(
   pillRef: RefObject<HTMLElement | null>,
   avoidRef: RefObject<HTMLElement | null> | undefined,
   baseBottom: number,

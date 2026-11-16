@@ -78,38 +78,3 @@ export function pickAt(
   }
   return best;
 }
-
-export function snapToVertex(
-  scene: CadScene,
-  x: number,
-  y: number,
-  tolerance: number,
-  hiddenLayers: ReadonlySet<number>,
-): [number, number] | null {
-  let best: [number, number] | null = null;
-  let bestDistance = tolerance;
-  const seen = new Set<number>();
-  for (const [cx, cy] of cellsOverlapping(scene, [
-    x - tolerance,
-    y - tolerance,
-    x + tolerance,
-    y + tolerance,
-  ])) {
-    for (const index of scene.cells[cx * GRID_CELLS + cy] ?? []) {
-      if (seen.has(index)) continue;
-      seen.add(index);
-      const entity = scene.drawing.entities[index];
-      if (!entity || hiddenLayers.has(entity.l)) continue;
-      for (let i = 0; i < entity.p.length; i += 2) {
-        const px = entity.p[i] as number;
-        const py = entity.p[i + 1] as number;
-        const distance = Math.hypot(px - x, py - y);
-        if (distance <= bestDistance) {
-          bestDistance = distance;
-          best = [px, py];
-        }
-      }
-    }
-  }
-  return best;
-}

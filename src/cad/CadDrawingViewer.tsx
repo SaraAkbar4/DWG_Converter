@@ -8,6 +8,9 @@ import { CAD_PAPER, PRINT_PAPER } from './cadPaper';
 import { selectionGroup, type CadSelectMode } from './cadSelectionGroup';
 import { CadSelectionBar } from './CadSelectionBar';
 import { CadStatusChip } from './CadStatusChip';
+import { CadCursorReadout } from './CadCursorReadout';
+import { CadSnapControls } from './CadSnapControls';
+import { DEFAULT_SNAP_SETTINGS, type CadAngleLock, type CadSnapSettings } from './cadSnap';
 import { CadToolbar } from './CadToolbar';
 import { CadViewRail } from './CadViewRail';
 import { entityPath } from './drawCadScene';
@@ -56,6 +59,8 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
   const [style, setStyle] = useState<CadStyle>(DEFAULT_CAD_STYLE);
   const [panel, setPanel] = useState<CadPanel>(null);
   const [selection, setSelection] = useState<CadSelection>(null);
+  const [snapSettings, setSnapSettings] = useStoredState<CadSnapSettings>('kodifly-viewer-snaps', DEFAULT_SNAP_SETTINGS);
+  const [angleLock, setAngleLock] = useStoredState<CadAngleLock>('kodifly-viewer-angle-lock', 0);
   const drawingLook = style.look === 'drawing';
   const paperTone = style.paper === 'auto' ? viewerTheme : style.paper;
   const paper = drawingLook ? CAD_PAPER[paperTone] : PRINT_PAPER;
@@ -107,6 +112,8 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
       onTool('select');
     },
     onSelect: setSelection,
+    snapSettings,
+    angleLock,
   });
 
   const togglePanel = (next: Exclude<CadPanel, null>) =>
@@ -142,6 +149,16 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     { label: 'Measure distance', shortcut: 'M', run: () => (tool === 'measure' ? stopMeasure() : startMeasure('distance')) },
     { label: 'Measure area', shortcut: 'R', run: () => startMeasure('area') },
     { label: 'Measure angle', shortcut: 'G', run: () => startMeasure('angle') },
+    {
+      label: snapSettings.enabled ? 'Turn snapping off' : 'Turn snapping on',
+      shortcut: 'F3',
+      run: () => setSnapSettings({ ...snapSettings, enabled: !snapSettings.enabled }),
+    },
+    {
+      label: angleLock === 90 ? 'Turn ortho lock off' : 'Lock measuring to horizontal or vertical (ortho)',
+      shortcut: 'F8',
+      run: () => setAngleLock(angleLock === 90 ? 0 : 90),
+    },
     { label: 'Layers', shortcut: 'L', run: () => togglePanel('layers') },
     { label: 'Search rooms and labels', shortcut: 'S', run: () => togglePanel('find') },
     { label: 'Appearance', shortcut: 'A', run: () => togglePanel('appearance') },
@@ -160,7 +177,11 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
       const target = event.target as HTMLElement;
       if (event.metaKey || event.ctrlKey || event.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       const key = event.key === '=' ? '+' : event.key.toUpperCase();
-      commandsRef.current.find((command) => command.shortcut === key)?.run();
+      const command = commandsRef.current.find((item) => item.shortcut === key);
+      if (!command) return;
+      // F3 and F8 would otherwise open the browser's find bar or similar.
+      if (/^F\d+$/.test(key)) event.preventDefault();
+      command.run();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -246,6 +267,15 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         avoidRef={statusRef}
         onClearSelection={() => setSelection(null)}
         onExitMeasure={stopMeasure}
+        snapControls={
+          <CadSnapControls
+            settings={snapSettings}
+            onSettings={setSnapSettings}
+            angleLock={angleLock}
+            onAngleLock={setAngleLock}
+            gridShown={drawingLook && style.grid}
+          />
+        }
       />
       <CadStatusChip
         ref={statusRef}
@@ -258,7 +288,9 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         }
         onShowLayer={layers.toggleHidden}
         onResetLayers={layers.reset}
-      />
+      >
+        <CadCursorReadout cursor={canvas.cursor} metersPerUnit={drawing.meters_per_unit} units={drawing.units} measuring={tool === 'measure'} />
+      </CadStatusChip>
       <CadViewRail onFit={canvas.fit} onZoom={canvas.zoomBy} />
       <CadCommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <CadPanels
@@ -277,4 +309,30 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
       />
     </div>
   );
+}
+
+/** State kept in this browser between visits. Falls back to `initial` when storage is unavailable. */
+function useStoredState<T>(key: string, initial: T): [T, (value: T) => void] {
+  const [value, setValue] = useState<T>(initial);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored == null) return;
+      const parsed = JSON.parse(stored) as T;
+      setValue(typeof initial === 'object' && initial ? { ...initial, ...parsed } : parsed);
+    } catch {
+      // Private windows and blocked storage keep the default.
+    }
+    // `initial` is a constant for each key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const store = (next: T) => {
+    setValue(next);
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // Not saved; the setting still applies for this visit.
+    }
+  };
+  return [value, store];
 }

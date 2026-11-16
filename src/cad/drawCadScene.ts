@@ -1,13 +1,13 @@
 import { TEXT_LINE_SPACING } from './cadPick';
 import { readableInk, type CadPaper } from './cadPaper';
-import { niceMetricStep } from './cadUnits';
+import { gridStepUnits } from './cadUnits';
+import { CAD_SNAP_LABELS, type CadSnapKind } from './cadSnap';
 import { toScreen, toWorld, type CadView } from './cadView';
 import type { CadScene } from './prepareCadScene';
 import { measureAnchor, type CadMeasure } from './cadMeasure';
 import type { CadColorMode, CadSelection } from './types';
 
 const DASH_PX: [number, number] = [6, 4];
-const GRID_MIN_PX = 18;
 const GRID_MAJOR_EVERY = 5;
 const GLOW_PX = 8;
 
@@ -33,6 +33,19 @@ export type CadDrawState = {
   highlight: CadHighlight | null;
   /** Finished measurements, plus the one being drawn (label is null until it can be read). */
   measures: Array<CadMeasure & { label: string | null }>;
+  /** Where the next measuring click would land, with its snap and the line leading to it. */
+  pointer: CadPointer | null;
+};
+
+type CadPointer = {
+  point: [number, number];
+  snap: CadSnapKind | null;
+  /** The previous point of the measurement in progress. */
+  from: [number, number] | null;
+  /** The first point of an area, so the preview shows the closing edge. */
+  close: [number, number] | null;
+  /** Degrees the line from `from` is locked to, or 0. */
+  lock: number;
 };
 
 function inkFor(color: string, state: CadDrawState): string {
@@ -43,9 +56,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, scene: CadScene, state: CadDraw
   const metersPerUnit = scene.drawing.meters_per_unit;
   if (!metersPerUnit) return;
   const { view, width, height } = state;
-  const pxPerMeter = view.scale / metersPerUnit / state.dpr;
-  const stepMeters = niceMetricStep(pxPerMeter, GRID_MIN_PX);
-  const step = stepMeters / metersPerUnit;
+  const step = gridStepUnits(metersPerUnit, view.scale / state.dpr);
   const [originX, originY] = [scene.bounds[0], scene.bounds[1]];
   const [left, top] = toWorld(view, 0, 0);
   const [right, bottom] = toWorld(view, width, height);
@@ -192,6 +203,111 @@ function drawMeasure(ctx: CanvasRenderingContext2D, state: CadDrawState) {
   }
 }
 
+function drawSnapMarker(ctx: CanvasRenderingContext2D, kind: CadSnapKind, x: number, y: number, size: number) {
+  ctx.beginPath();
+  switch (kind) {
+    case 'endpoint':
+      ctx.rect(x - size, y - size, size * 2, size * 2);
+      break;
+    case 'midpoint':
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size, y + size * 0.8);
+      ctx.lineTo(x - size, y + size * 0.8);
+      ctx.closePath();
+      break;
+    case 'center':
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.moveTo(x - size * 0.4, y);
+      ctx.lineTo(x + size * 0.4, y);
+      ctx.moveTo(x, y - size * 0.4);
+      ctx.lineTo(x, y + size * 0.4);
+      break;
+    case 'intersection':
+      ctx.moveTo(x - size, y - size);
+      ctx.lineTo(x + size, y + size);
+      ctx.moveTo(x + size, y - size);
+      ctx.lineTo(x - size, y + size);
+      break;
+    case 'perpendicular':
+      ctx.moveTo(x - size, y - size);
+      ctx.lineTo(x - size, y + size);
+      ctx.lineTo(x + size, y + size);
+      ctx.moveTo(x - size, y);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x, y + size);
+      break;
+    case 'tangent':
+      ctx.arc(x, y + size * 0.2, size * 0.75, 0, Math.PI * 2);
+      ctx.moveTo(x - size, y - size * 0.55);
+      ctx.lineTo(x + size, y - size * 0.55);
+      break;
+    case 'nearest':
+      ctx.moveTo(x - size, y - size);
+      ctx.lineTo(x + size, y - size);
+      ctx.lineTo(x - size, y + size);
+      ctx.lineTo(x + size, y + size);
+      ctx.closePath();
+      break;
+    case 'grid':
+      ctx.moveTo(x - size, y);
+      ctx.lineTo(x + size, y);
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x, y + size);
+      break;
+  }
+  ctx.stroke();
+}
+
+function drawPointer(ctx: CanvasRenderingContext2D, state: CadDrawState) {
+  const pointer = state.pointer;
+  if (!pointer) return;
+  const { dpr, view } = state;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const [px, py] = toScreen(view, pointer.point[0], pointer.point[1]);
+  if (pointer.from) {
+    const [fx, fy] = toScreen(view, pointer.from[0], pointer.from[1]);
+    if (pointer.lock) {
+      // A faint guide along the locked direction, across the whole view.
+      const angle = Math.atan2(py - fy, px - fx);
+      const reach = state.width + state.height;
+      ctx.strokeStyle = state.accent.hover;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1 * dpr;
+      ctx.setLineDash([2 * dpr, 4 * dpr]);
+      ctx.beginPath();
+      ctx.moveTo(fx - Math.cos(angle) * reach, fy - Math.sin(angle) * reach);
+      ctx.lineTo(fx + Math.cos(angle) * reach, fy + Math.sin(angle) * reach);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = state.accent.selection;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.setLineDash([6 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(px, py);
+    if (pointer.close) {
+      const [cx, cy] = toScreen(view, pointer.close[0], pointer.close[1]);
+      ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (!pointer.snap) return;
+  ctx.strokeStyle = state.accent.hover;
+  ctx.lineWidth = 2 * dpr;
+  drawSnapMarker(ctx, pointer.snap, px, py, 6 * dpr);
+  const label = CAD_SNAP_LABELS[pointer.snap];
+  ctx.font = `600 ${11 * dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.lineWidth = 3 * dpr;
+  ctx.strokeStyle = state.paper.background;
+  ctx.strokeText(label, px + 10 * dpr, py + 10 * dpr);
+  ctx.fillStyle = state.accent.hover;
+  ctx.fillText(label, px + 10 * dpr, py + 10 * dpr);
+}
+
 export function drawCadBase(ctx: CanvasRenderingContext2D, scene: CadScene, state: CadDrawState) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = state.paper.background;
@@ -216,6 +332,7 @@ export function drawCadOverlays(
   }
   drawHover(ctx, scene, state);
   drawMeasure(ctx, state);
+  drawPointer(ctx, state);
 }
 
 function drawImage(

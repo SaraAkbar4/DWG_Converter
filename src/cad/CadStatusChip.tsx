@@ -1,6 +1,6 @@
 import { Tooltip } from 'antd';
 import { EyeOff, X } from 'lucide-react';
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useState, type ReactNode } from 'react';
 import styles from './cadFloorPlan.module.css';
 import { layerLabel } from './CadLayersList';
 import { useViewerTranslate } from './platform';
@@ -14,6 +14,8 @@ type Props = {
   onExitIsolate: () => void;
   onShowLayer: (layer: number) => void;
   onResetLayers: () => void;
+  /** Shown under the notices, for example the cursor's coordinates. */
+  children?: ReactNode;
 };
 
 function RevealButton({ label, ariaLabel, onClick }: { label: string; ariaLabel?: string; onClick: () => void }) {
@@ -121,6 +123,7 @@ export const CadStatusChip = forwardRef<HTMLDivElement, Props>(function CadStatu
           </div>
         </Tooltip>
       ) : null}
+      {props.children}
     </div>
   );
 });

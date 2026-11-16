@@ -743,3 +743,40 @@
     min-height: 0;
   }
 }
+
+.cursorReadout {
+  gap: 12px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.cursorReadout[data-idle='true'] {
+  visibility: hidden;
+}
+
+/* Fixed widths so the chip does not grow and shrink as the numbers change. */
+.cursorValue {
+  display: inline-block;
+  min-width: 13ch;
+  white-space: nowrap;
+}
+
+.cursorAxis {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cursorTag {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  font-weight: 600;
+}
+
+/* Touch screens have no hovering cursor to report. */
+@media (hover: none) {
+  .cursorReadout {
+    display: none;
+  }
+}

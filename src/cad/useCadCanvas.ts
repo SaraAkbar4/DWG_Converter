@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { pickAt, snapToVertex } from './cadPick';
+import { pickAt } from './cadPick';
+import { findSnap, lockAngle, type CadAngleLock, type CadSnapKind, type CadSnapSettings } from './cadSnap';
+import { gridStepUnits } from './cadUnits';
 import type { Bounds } from './cadGeometry';
 import type { CadPaper } from './cadPaper';
 import { centerOn, fitView, toWorld, zoomAt, type CadView } from './cadView';
@@ -10,6 +12,8 @@ import type { CadColorMode, CadSelection } from './types';
 import { measureLabel, type CadMeasure, type CadMeasureMode, type CadPoint } from './cadMeasure';
 
 const PICK_TOLERANCE_PX = 5;
+/** How close the cursor must come to a point, in CSS pixels, for a measurement to snap to it. */
+const SNAP_TOLERANCE_PX = 10;
 const CLICK_SLOP_PX = 4;
 const WHEEL_ZOOM_RATE = 0.0015;
 const FLY_TO_SCREEN_FRACTION = 0.25;
@@ -45,11 +49,18 @@ type Options = {
   onCommit: (measure: CadMeasure) => void;
   onStopMeasure: () => void;
   onSelect: (selection: CadSelection) => void;
+  snapSettings: CadSnapSettings;
+  /** Degrees measuring lines are locked to (90 = horizontal or vertical), or 0. Shift flips it while held. */
+  angleLock: CadAngleLock;
 };
+
+/** The cursor in drawing units, and where a measuring click would land. */
+export type CadCursor = { x: number; y: number; snap: CadSnapKind | null; lock: number };
 
 export function useCadCanvas(options: Options) {
   const { scene, colorMode, paper, showGrid, lineWeight, minTextPx, english, image } = options;
   const { accent, hiddenLayers, highlight, tool, measureMode, measures, draft, onDraft, onCommit, onStopMeasure, onSelect } = options;
+  const { snapSettings, angleLock } = options;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewRef = useRef<CadView | null>(null);
   const fitScaleRef = useRef(1);
@@ -60,7 +71,7 @@ export function useCadCanvas(options: Options) {
   const interactionAtRef = useRef(0);
   const settleRef = useRef(0);
   const [hover, setHover] = useState<CadSelection>(null);
-  const [cursor, setCursor] = useState<[number, number] | null>(null);
+  const [cursor, setCursor] = useState<CadCursor | null>(null);
   const [view, setView] = useState<CadView | null>(null);
   const draw = {
     colorMode,
@@ -82,6 +93,18 @@ export function useCadCanvas(options: Options) {
     ],
     measureMode,
     draft,
+    pointer:
+      tool === 'measure' && cursor
+        ? {
+            point: [cursor.x, cursor.y] as [number, number],
+            snap: cursor.snap,
+            from: draft.at(-1) ?? null,
+            close: measureMode === 'area' && draft.length >= 2 ? (draft[0] ?? null) : null,
+            lock: draft.length ? cursor.lock : 0,
+          }
+        : null,
+    snapSettings,
+    angleLock,
     onDraft,
     onCommit,
     onStopMeasure,
@@ -179,6 +202,8 @@ export function useCadCanvas(options: Options) {
     measures,
     draft,
     measureMode,
+    cursor,
+    tool,
   ]);
 
   useEffect(() => {
@@ -214,6 +239,35 @@ export function useCadCanvas(options: Options) {
     };
     const worldAt = (sx: number, sy: number) => toWorld(viewRef.current as CadView, sx, sy);
     const tolerance = () => PICK_TOLERANCE_PX / (viewRef.current?.scale ?? 1);
+    /** Where a measuring click at (sx, sy) lands: snapped to the drawing, then held to the locked angle. */
+    const resolve = (sx: number, sy: number, shift: boolean): CadCursor => {
+      const [wx, wy] = worldAt(sx, sy);
+      const state = stateRef.current;
+      if (state.tool !== 'measure') return { x: wx, y: wy, snap: null, lock: 0 };
+      const points = marksRef.current.draft;
+      const from = points.length < MEASURE_POINTS[state.measureMode] ? (points.at(-1) ?? null) : null;
+      const view = viewRef.current as CadView;
+      const metersPerUnit = scene.drawing.meters_per_unit;
+      const grid =
+        state.showGrid && metersPerUnit
+          ? { step: gridStepUnits(metersPerUnit, view.scale), origin: [scene.bounds[0], scene.bounds[1]] as CadPoint }
+          : null;
+      const snap = findSnap(scene, wx, wy, SNAP_TOLERANCE_PX / view.scale, {
+        settings: state.snapSettings,
+        hiddenLayers: state.hiddenLayers,
+        from,
+        grid,
+      });
+      const lock = shift ? (state.angleLock ? 0 : 90) : state.angleLock;
+      let point: CadPoint = snap?.point ?? [wx, wy];
+      if (from && lock) point = lockAngle(from, point, lock);
+      return { x: point[0], y: point[1], snap: snap?.kind ?? null, lock };
+    };
+    let last: { sx: number; sy: number } | null = null;
+    const onShift = (event: KeyboardEvent) => {
+      if (event.key !== 'Shift' || !last || !viewRef.current) return;
+      setCursor(resolve(last.sx, last.sy, event.type === 'keydown'));
+    };
     let drag: { x: number; y: number; moved: boolean } | null = null;
     const touches = new Map<number, [number, number]>();
     const pinchSpan = () => {
@@ -277,7 +331,8 @@ export function useCadCanvas(options: Options) {
         return;
       }
       const [wx, wy] = worldAt(sx, sy);
-      setCursor([wx, wy]);
+      last = { sx, sy };
+      setCursor(resolve(sx, sy, event.shiftKey));
       if (stateRef.current.tool === 'select') {
         const next = pickAt(scene, wx, wy, tolerance(), stateRef.current.hiddenLayers);
         setHover((current) => (sameSelection(current, next) ? current : next));
@@ -292,12 +347,13 @@ export function useCadCanvas(options: Options) {
       const clicked = drag && !drag.moved;
       drag = null;
       if (!clicked || !viewRef.current) return;
-      const [wx, wy] = worldAt(...local(event));
+      const [sx, sy] = local(event);
+      const [wx, wy] = worldAt(sx, sy);
       if (stateRef.current.tool === 'measure') {
         const { measureMode: mode, onDraft: setDraft, onCommit: commit } = stateRef.current;
         const points = marksRef.current.draft;
-        // Measuring snaps to a nearby endpoint or vertex when there is one.
-        const point = snapToVertex(scene, wx, wy, tolerance() * 2, stateRef.current.hiddenLayers) ?? ([wx, wy] as CadPoint);
+        const landed = resolve(sx, sy, event.shiftKey);
+        const point: CadPoint = [landed.x, landed.y];
         const [first] = points;
         if (mode === 'area' && first && points.length >= 3 && Math.hypot(point[0] - first[0], point[1] - first[1]) <= tolerance() * 2) {
           marksRef.current = { measures: [...marksRef.current.measures, { mode, points }], draft: [] };
@@ -321,6 +377,7 @@ export function useCadCanvas(options: Options) {
       }
     };
     const onPointerLeave = () => {
+      last = null;
       setHover(null);
       setCursor(null);
     };
@@ -364,7 +421,11 @@ export function useCadCanvas(options: Options) {
     canvas.addEventListener('pointerleave', onPointerLeave);
     canvas.addEventListener('keydown', onKeyDown);
     canvas.addEventListener('contextmenu', onContextMenu);
+    window.addEventListener('keydown', onShift);
+    window.addEventListener('keyup', onShift);
     return () => {
+      window.removeEventListener('keydown', onShift);
+      window.removeEventListener('keyup', onShift);
       canvas.removeEventListener('contextmenu', onContextMenu);
       canvas.removeEventListener('keydown', onKeyDown);
       observer.disconnect();

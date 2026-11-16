@@ -112,6 +112,7 @@ function Card({ sample, onOpen }: { sample: Sample; onOpen: (file: File) => void
         hover: null,
         highlight: null,
         measures: [],
+        pointer: null,
       });
     };
     draw();

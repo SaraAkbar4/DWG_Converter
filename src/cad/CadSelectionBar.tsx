@@ -1,8 +1,9 @@
 import { Button, Input, Select, theme } from 'antd';
-import { useState, type RefObject } from 'react';
+import { useState, type ReactNode, type RefObject } from 'react';
 import { useViewerTranslate } from './platform';
 import { layerLabel } from './CadLayersList';
 import type { CadGroup } from './cadSelectionGroup';
+import { CadMeasureBar } from './CadMeasureBar';
 import { CadSelectionPill, cadPillIcons } from './CadSelectionPill';
 import { measureLabel, type CadMeasure, type CadPoint } from './cadMeasure';
 import { KNOWN_LENGTH_UNITS, metersPerDrawingUnit, type KnownLengthUnit } from './cadUnits';
@@ -31,6 +32,8 @@ type Props = {
   avoidRef: RefObject<HTMLElement | null>;
   onClearSelection: () => void;
   onExitMeasure: () => void;
+  /** Snap and angle-lock settings, shown while measuring. */
+  snapControls?: ReactNode;
 };
 
 export function CadSelectionBar(props: Props) {
@@ -44,22 +47,16 @@ export function CadSelectionBar(props: Props) {
     const result =
       measureLabel({ mode: measureMode, points: measure }, drawing) ??
       (finished ? measureLabel(finished, drawing) : null);
-    const titles = { distance: 'Measure distance', area: 'Measure area', angle: 'Measure angle' };
-    const hints = {
-      distance: 'Click two points. Right-click to stop. It stays on this sheet until you close the viewer.',
-      area: 'Click the corners, then the first point again. Right-click to stop. It stays on this sheet until you close the viewer.',
-      angle: 'Click three points. Right-click to stop. The angle stays until you close the viewer.',
-    };
     const distance =
       measureMode === 'distance' ? pairLength(measure.length >= 2 ? measure : finished?.points) : 0;
     return (
-      <CadSelectionPill
-        title={t(`viewer3d.cadFloorPlan.measure.${measureMode}`, titles[measureMode])}
-        detail={result ?? t(`viewer3d.cadFloorPlan.measureHint.${measureMode}`, hints[measureMode])}
-        actions={[]}
+      <CadMeasureBar
+        mode={measureMode}
+        result={result}
         onClose={props.onExitMeasure}
         avoidRef={props.avoidRef}
-        extra={
+        controls={props.snapControls}
+        footer={
           props.onCalibrate && distance > 0 ? (
             <ScaleField drawingLength={distance} onCalibrate={props.onCalibrate} />
           ) : undefined
