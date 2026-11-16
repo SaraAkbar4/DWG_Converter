@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, Menu, Moon, Sun, X } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ViewerTheme } from '../cad/platform';
 import { TRIAL_URL } from './content';
@@ -19,11 +19,9 @@ type Props = {
   onToggleTheme: () => void;
   /** Legal pages do not contain these sections, so the links return home. */
   sectionsOnHome?: boolean;
-  /** Shown to the left of the logo. Privacy and terms use it to return home. */
-  backHref?: string;
 };
 
-export function SiteHeader({ theme, onToggleTheme, sectionsOnHome = false, backHref }: Props) {
+export function SiteHeader({ theme, onToggleTheme, sectionsOnHome = false }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const hrefFor = (hash: string) => (sectionsOnHome ? `/${hash}` : hash);
@@ -51,11 +49,6 @@ export function SiteHeader({ theme, onToggleTheme, sectionsOnHome = false, backH
   return (
     <header className={styles.header} ref={headerRef}>
       <div className={styles.brand}>
-        {backHref ? (
-          <a className={styles.iconButton} href={backHref} aria-label="Back">
-            <ChevronLeft size={18} strokeWidth={2} />
-          </a>
-        ) : null}
         <a href="https://www.spatialsense.app/" aria-label="SpatialSense">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={theme === 'dark' ? '/logo.svg' : '/logo-light.svg'} alt="SpatialSense" height={20} />

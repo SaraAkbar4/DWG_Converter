@@ -16,9 +16,10 @@ test('every page has the site navbar', async ({ page }) => {
     await expect(how).toBeVisible();
     const onLegal = path === '/privacy' || path === '/terms';
     await expect(how).toHaveAttribute('href', onLegal ? '/#how' : '#how');
-    const back = header.getByRole('link', { name: 'Back' });
+    const back = page.getByRole('link', { name: 'Back' });
     if (onLegal) await expect(back).toHaveAttribute('href', '/');
     else await expect(back).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Back' })).toHaveCount(0);
     if (!wide) await header.getByRole('button', { name: 'Close menu' }).click();
   }
 });

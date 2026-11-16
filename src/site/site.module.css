@@ -624,13 +624,39 @@
   line-height: 1.6;
 }
 
-.legal h1 {
+.legalHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin: 20px 0 40px;
+}
+
+.legalBack {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  color: var(--text);
+}
+
+.legal a.legalBack,
+.legal a.legalBack:hover {
+  color: var(--text);
+}
+
+.legal h1 {
+  margin: 0;
   font-size: clamp(2.5rem, 5.5vw, 3.25rem);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: -0.025em;
   text-align: left;
+}
+
+@media (min-width: 800px) {
+  /* The chevron sits just before the title, so the title stays flush with the body. */
+  .legalHead {
+    margin-left: -40px;
+  }
 }
 
 .legal h2 {
