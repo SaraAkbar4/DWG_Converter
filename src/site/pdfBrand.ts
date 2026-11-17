@@ -79,11 +79,11 @@ function pdfLabel(label: string, maxWidth: number, size: number) {
 
 /** Header and footer for one drawing page, and the box left for the sheet. */
 export async function pdfBrand(pageWidth: number, pageHeight: number, label = ''): Promise<PdfBrand> {
-  const accentH = 1.6 * MM;
-  const accentY = pageHeight - 10 * MM - accentH;
   const headerH = 9 * MM;
-  const headerY = accentY - 6 * MM - headerH;
-  const headerRuleY = headerY - 6 * MM;
+  const headerY = pageHeight - 10 * MM - headerH;
+  const accentH = 1.6 * MM;
+  const accentY = headerY - 6 * MM - accentH;
+  const headerRuleY = accentY - 6 * MM;
   const footerRuleY = 32 * MM;
   const footerH = 7 * MM;
   const footerW = footerH * KODIFLY_FOOTER_LOGO_ASPECT;

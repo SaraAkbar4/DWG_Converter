@@ -37,8 +37,13 @@ export async function frameExportPng(source: HTMLCanvasElement, label: string): 
   const [header, footer] = await loadLogos();
   const scale = Math.min(2.4, Math.max(0.9, Math.max(source.width, source.height) / 1200));
   const margin = Math.round(28 * scale);
+  const pad = Math.round(16 * scale);
   const accentH = Math.max(4, Math.round(6 * scale));
-  const headerH = Math.round(86 * scale);
+  const logoH = Math.round(30 * scale);
+  const logoW = logoH * SPATIAL_SENSE_LOGO_ASPECT;
+  const logoY = pad;
+  const accentY = logoY + logoH + Math.round(12 * scale);
+  const headerH = accentY + accentH + pad;
   const footerH = Math.round(72 * scale);
   const out = document.createElement('canvas');
   out.width = source.width;
@@ -48,13 +53,9 @@ export async function frameExportPng(source: HTMLCanvasElement, label: string): 
 
   context.fillStyle = PAPER;
   context.fillRect(0, 0, out.width, out.height);
-  context.fillStyle = ACCENT;
-  context.fillRect(margin, Math.round(14 * scale), out.width - margin * 2, accentH);
-
-  const logoH = Math.round(30 * scale);
-  const logoW = logoH * SPATIAL_SENSE_LOGO_ASPECT;
-  const logoY = accentH + Math.round(14 * scale) + (headerH - accentH - Math.round(14 * scale) - logoH) / 2;
   if (header) context.drawImage(header, margin, logoY, logoW, logoH);
+  context.fillStyle = ACCENT;
+  context.fillRect(margin, accentY, out.width - margin * 2, accentH);
 
   context.font = `500 ${Math.round(15 * scale)}px Helvetica, Arial, sans-serif`;
   context.fillStyle = MUTED;
