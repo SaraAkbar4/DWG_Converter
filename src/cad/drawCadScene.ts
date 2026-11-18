@@ -4,7 +4,7 @@ import { gridStepUnits } from './cadUnits';
 import { CAD_SNAP_LABELS, type CadSnapKind } from './cadSnap';
 import { toScreen, toWorld, type CadView } from './cadView';
 import type { CadScene } from './prepareCadScene';
-import { measureAnchor, type CadMeasure } from './cadMeasure';
+import { measureAnchor, type CadMeasure, type CadMeasureReadout } from './cadMeasure';
 import type { CadColorMode, CadSelection } from './types';
 
 const DASH_PX: [number, number] = [6, 4];
@@ -32,7 +32,12 @@ export type CadDrawState = {
   hover: CadSelection;
   highlight: CadHighlight | null;
   /** Finished measurements, plus the one being drawn (label is null until it can be read). */
-  measures: Array<CadMeasure & { label: string | null }>;
+  measures: Array<CadMeasure & { label: string | null; readout?: CadMeasureReadout | null }>;
+  /**
+   * The live viewer paints captions as HTML so they can be copied.
+   * Export paints the same caption onto the canvas.
+   */
+  paintMeasureCallout?: boolean;
   /** Where the next measuring click would land, with its snap and the line leading to it. */
   pointer: CadPointer | null;
 };
@@ -163,16 +168,19 @@ function drawHover(ctx: CanvasRenderingContext2D, scene: CadScene, state: CadDra
   ctx.stroke();
 }
 
+const MEASURE_FILL = 'rgba(13, 71, 153, 0.42)';
+const MEASURE_STROKE = '#7EAEFF';
+const MEASURE_TITLE = '#F0F5FF';
+const MEASURE_DETAIL = '#D5DCE8';
+const MEASURE_FONT = '-apple-system, BlinkMacSystemFont, sans-serif';
+
 function drawMeasure(ctx: CanvasRenderingContext2D, state: CadDrawState) {
   if (state.measures.length === 0) return;
+  const { dpr } = state;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.strokeStyle = state.accent.selection;
-  ctx.fillStyle = state.accent.selection;
-  ctx.lineWidth = 2 * state.dpr;
   ctx.setLineDash([]);
-  ctx.font = `600 ${13 * state.dpr}px -apple-system, BlinkMacSystemFont, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   for (const measure of state.measures) {
     const points = measure.points.map(([x, y]) => toScreen(state.view, x, y));
     if (points.length === 0) continue;
@@ -180,27 +188,101 @@ function drawMeasure(ctx: CanvasRenderingContext2D, state: CadDrawState) {
     points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
     if (measure.mode === 'area' && points.length > 2) {
       ctx.closePath();
-      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = MEASURE_FILL;
       ctx.fill();
-      ctx.globalAlpha = 1;
     }
+    ctx.strokeStyle = MEASURE_STROKE;
+    ctx.lineWidth = 2 * dpr;
     ctx.stroke();
+    if (measure.mode === 'angle') drawAngleArc(ctx, points, dpr);
     for (const [x, y] of points) {
       ctx.beginPath();
-      ctx.arc(x, y, 4 * state.dpr, 0, Math.PI * 2);
+      ctx.arc(x, y, 5 * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
       ctx.fill();
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.strokeStyle = '#0D4799';
+      ctx.stroke();
     }
-    const anchor = measure.label ? measureAnchor(measure) : null;
-    if (!measure.label || !anchor) continue;
+    if (state.paintMeasureCallout === false || !measure.readout) continue;
+    const anchor = measureAnchor(measure);
+    if (!anchor) continue;
     const [x, y] = toScreen(state.view, anchor[0], anchor[1]);
-    ctx.lineWidth = 4 * state.dpr;
-    ctx.strokeStyle = state.paper.background;
-    ctx.strokeText(measure.label, x, y - 8 * state.dpr);
-    ctx.fillStyle = state.accent.selection;
-    ctx.fillText(measure.label, x, y - 8 * state.dpr);
-    ctx.lineWidth = 2 * state.dpr;
-    ctx.strokeStyle = state.accent.selection;
+    drawMeasureLabel(ctx, measure.readout, x, y, dpr, measure.mode === 'angle');
   }
+}
+
+/** Screen pixels (before dpr) of the arc that marks which angle is measured. */
+const ANGLE_ARC_PX = 26;
+
+/**
+ * Marks the measured angle at the corner (the middle point) with an arc between the two arms,
+ * the short way round, so it is clear which of the two angles the value belongs to. The radius
+ * is in screen pixels, so it reads the same at every zoom, and shrinks to fit short arms.
+ */
+function drawAngleArc(ctx: CanvasRenderingContext2D, points: Array<[number, number]>, dpr: number) {
+  const [a, b, c] = points;
+  if (!a || !b || !c) return;
+  const armA = Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const armC = Math.hypot(c[0] - b[0], c[1] - b[1]);
+  const radius = Math.min(ANGLE_ARC_PX * dpr, armA * 0.45, armC * 0.45);
+  if (radius < 3 * dpr) return;
+  const start = Math.atan2(a[1] - b[1], a[0] - b[0]);
+  let sweep = Math.atan2(c[1] - b[1], c[0] - b[0]) - start;
+  // Normalise to (-π, π], so the arc spans the angle that is reported (never the reflex one).
+  sweep = Math.atan2(Math.sin(sweep), Math.cos(sweep));
+  ctx.beginPath();
+  ctx.moveTo(b[0], b[1]);
+  ctx.arc(b[0], b[1], radius, start, start + sweep, sweep < 0);
+  ctx.closePath();
+  ctx.fillStyle = MEASURE_FILL;
+  ctx.globalAlpha = 0.35;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(b[0], b[1], radius, start, start + sweep, sweep < 0);
+  ctx.strokeStyle = MEASURE_STROKE;
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.stroke();
+}
+
+/** The value sits on the geometry. Lines are stacked with a gap so they do not run together. */
+function drawMeasureLabel(
+  ctx: CanvasRenderingContext2D,
+  readout: CadMeasureReadout,
+  x: number,
+  y: number,
+  dpr: number,
+  above: boolean,
+) {
+  const titleSize = 13 * dpr;
+  const detailSize = 11 * dpr;
+  const gap = 8 * dpr;
+  const block = titleSize + (readout.detail ? gap + detailSize : 0);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round';
+  const top = above ? y - 14 * dpr - block : y - block / 2;
+  ctx.font = `650 ${titleSize}px ${MEASURE_FONT}`;
+  paintOutlinedText(ctx, readout.title, x, top, MEASURE_TITLE, dpr);
+  if (!readout.detail) return;
+  ctx.font = `550 ${detailSize}px ${MEASURE_FONT}`;
+  paintOutlinedText(ctx, readout.detail, x, top + titleSize + gap, MEASURE_DETAIL, dpr);
+}
+
+function paintOutlinedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fill: string,
+  dpr: number,
+) {
+  ctx.lineWidth = 1.75 * dpr;
+  ctx.strokeStyle = 'rgba(8, 12, 20, 0.8)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill;
+  ctx.fillText(text, x, y);
 }
 
 function drawSnapMarker(ctx: CanvasRenderingContext2D, kind: CadSnapKind, x: number, y: number, size: number) {

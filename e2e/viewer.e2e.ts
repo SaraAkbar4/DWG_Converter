@@ -28,7 +28,7 @@ test('open the sample, use the tools, and export', async ({ page }) => {
   const box = (await canvas.boundingBox())!;
   await page.mouse.click(box.x + box.width * 0.35, box.y + box.height * 0.5);
   await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.5);
-  await expect(page.getByText(/\d+\.\d{2} m ·/)).toBeVisible();
+  await expect(page.getByText(/\d+\.\d{2} m/)).toBeVisible();
   await page.keyboard.press('Escape');
 
   // Command palette lists the actions.

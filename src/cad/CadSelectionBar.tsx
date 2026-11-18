@@ -1,9 +1,8 @@
 import { Button, Input, Select, theme } from 'antd';
-import { useState, type ReactNode, type RefObject } from 'react';
+import { useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useViewerTranslate } from './platform';
 import { layerLabel } from './CadLayersList';
 import type { CadGroup } from './cadSelectionGroup';
-import { CadMeasureBar } from './CadMeasureBar';
 import { CadSelectionPill, cadPillIcons } from './CadSelectionPill';
 import { measureLabel, type CadMeasure, type CadPoint } from './cadMeasure';
 import { KNOWN_LENGTH_UNITS, metersPerDrawingUnit, type KnownLengthUnit } from './cadUnits';
@@ -31,7 +30,6 @@ type Props = {
   onToggleHidden: (layer: number) => void;
   avoidRef: RefObject<HTMLElement | null>;
   onClearSelection: () => void;
-  onExitMeasure: () => void;
   /** Snap and angle-lock settings, shown while measuring. */
   snapControls?: ReactNode;
 };
@@ -44,24 +42,44 @@ export function CadSelectionBar(props: Props) {
   if (props.tool === 'measure') {
     const { measure, measureMode, saved } = props;
     const finished = [...saved].reverse().find((item) => item.mode === measureMode);
-    const result =
-      measureLabel({ mode: measureMode, points: measure }, drawing) ??
-      (finished ? measureLabel(finished, drawing) : null);
+    // The last finished value only while nothing new is being clicked out; otherwise it would
+    // show the previous angle next to the new lines.
+    const result = measure.length
+      ? measureLabel({ mode: measureMode, points: measure }, drawing)
+      : finished
+        ? measureLabel(finished, drawing)
+        : null;
     const distance =
       measureMode === 'distance' ? pairLength(measure.length >= 2 ? measure : finished?.points) : 0;
+    // The value is drawn on the sheet. This only exposes it to assistive tech, not as a panel.
     return (
-      <CadMeasureBar
-        mode={measureMode}
-        result={result}
-        onClose={props.onExitMeasure}
-        avoidRef={props.avoidRef}
-        controls={props.snapControls}
-        footer={
-          props.onCalibrate && distance > 0 ? (
-            <ScaleField drawingLength={distance} onCalibrate={props.onCalibrate} />
-          ) : undefined
-        }
-      />
+      <>
+        {result ? (
+          <span aria-live="polite" style={hiddenResult}>
+            {result}
+          </span>
+        ) : null}
+        {props.snapControls || (props.onCalibrate && distance > 0) ? (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 16,
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              maxWidth: 'calc(100% - 32px)',
+            }}
+          >
+            {props.snapControls}
+            {props.onCalibrate && distance > 0 ? (
+              <ScaleField drawingLength={distance} onCalibrate={props.onCalibrate} />
+            ) : null}
+          </div>
+        ) : null}
+      </>
     );
   }
   if (!heading || !group) return null;
@@ -116,6 +134,18 @@ export function CadSelectionBar(props: Props) {
     />
   );
 }
+
+const hiddenResult: CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
 
 function pairLength(points: CadPoint[] | undefined): number {
   const start = points?.[0];
