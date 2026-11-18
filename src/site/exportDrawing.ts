@@ -2,6 +2,8 @@ import { measureAnchor, measureLabel, type CadMeasure } from '../cad/cadMeasure'
 import type { CadDrawing } from '../cad/types';
 import { pdfBrand } from './pdfBrand';
 import { frameExportPng } from './pngWatermark';
+import type { CadExporter } from '../cad/CadDrawingViewer';
+import type { SheetLayout } from './exportSheet';
 
 /** White CAD ink is unreadable on a white page. */
 const ink = (color: string) => (color.toLowerCase() === '#ffffff' ? '#000000' : color);
@@ -17,23 +19,37 @@ function download(blob: Blob, fileName: string) {
 /** CSS pixels on the on-screen canvas. */
 export type PngRegion = { x: number; y: number; width: number; height: number };
 
-/** The chosen area of the current view, in the canvas's own pixels. */
-export async function exportPng(canvas: HTMLCanvasElement, stem: string, region: PngRegion) {
-  const scaleX = canvas.clientWidth > 0 ? canvas.width / canvas.clientWidth : 1;
-  const scaleY = canvas.clientHeight > 0 ? canvas.height / canvas.clientHeight : 1;
-  const x = Math.max(0, Math.min(canvas.width - 1, Math.round(region.x * scaleX)));
-  const y = Math.max(0, Math.min(canvas.height - 1, Math.round(region.y * scaleY)));
-  const width = Math.max(1, Math.min(canvas.width - x, Math.round(region.width * scaleX)));
-  const height = Math.max(1, Math.min(canvas.height - y, Math.round(region.height * scaleY)));
-  const out = document.createElement('canvas');
-  out.width = width;
-  out.height = height;
-  const context = out.getContext('2d');
-  if (!context) return;
-  context.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-  const framed = await frameExportPng(out, stem).catch(() => out);
-  const blob = await new Promise<Blob | null>((resolve) => framed.toBlob(resolve, 'image/png'));
-  if (blob) download(blob, `${stem}.png`);
+/**
+ * One sheet of paper with the area drawn on it, header and footer included, at `layout`'s size.
+ *
+ * Like a CAD plot (and ShareCAD's print), the area is drawn again from the drawing's geometry at
+ * the sheet's resolution and scale, not copied from the screen.
+ */
+export async function renderSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string) {
+  const body = exporter.render(layout.view, layout.body.width, layout.body.height, layout.dpr);
+  if (!body) return null;
+  const context = body.getContext('2d');
+  if (context) {
+    // Whatever runs past the box at a fixed scale is cut off at the margin, as on a plot.
+    const { x, y, width, height } = layout.box;
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, body.width, y);
+    context.fillRect(0, y + height, body.width, body.height - y - height);
+    context.fillRect(0, y, x, height);
+    context.fillRect(x + width, y, body.width - x - width, height);
+  }
+  return frameExportPng(body, stem, layout.frame.scale).catch(() => body);
+}
+
+/** The sheet as a PNG download. */
+export async function exportSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string) {
+  const sheet = await renderSheetPng(exporter, layout, stem);
+  if (!sheet) return false;
+  const blob = await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, 'image/png'));
+  if (!blob) return false;
+  download(blob, `${stem}.png`);
+  return true;
 }
 
 const MEASURE_INK = '#2459d8';

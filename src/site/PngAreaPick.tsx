@@ -6,7 +6,8 @@ const MIN_EDGE = 8;
 
 type Props = {
   canvas: HTMLCanvasElement;
-  onDownload: (region: PngRegion) => void;
+  /** The chosen rectangle, in CSS pixels on the canvas. */
+  onPick: (region: PngRegion) => void;
   onCancel: () => void;
 };
 
@@ -22,8 +23,8 @@ const regionFrom = (start: Point, end: Point, width: number, height: number): Pn
   return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
 };
 
-/** Asks for a rectangle on the drawing, then hands that area back to download. */
-export function PngAreaPick({ canvas, onDownload, onCancel }: Props) {
+/** Asks for a rectangle on the drawing, then hands that area back to the export dialog. */
+export function PngAreaPick({ canvas, onPick, onCancel }: Props) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<Point | null>(null);
   const [box, setBox] = useState(() => canvas.getBoundingClientRect());
@@ -89,9 +90,9 @@ export function PngAreaPick({ canvas, onDownload, onCancel }: Props) {
         <div className={styles.pngFrame} style={{ left: region.x, top: region.y, width: region.width, height: region.height }} />
       )}
       <div className={styles.pngBar} onPointerDown={(event) => event.stopPropagation()}>
-        <p>{ready ? 'Download this area, or drag to change it.' : 'Drag to choose the area to export.'}</p>
-        <button type="button" className={styles.pillSmall} disabled={!ready} onClick={() => region && onDownload(region)}>
-          Download PNG
+        <p>{ready ? 'Use this area, or drag to change it.' : 'Drag to choose the area to export.'}</p>
+        <button type="button" className={styles.pillSmall} disabled={!ready} onClick={() => region && onPick(region)}>
+          Use this area
         </button>
         <button type="button" className={styles.pngCancel} onClick={onCancel}>
           Cancel

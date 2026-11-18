@@ -1,15 +1,18 @@
 import { Alert, Button, Dropdown, Tooltip } from 'antd';
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Maximize, MessageCircle, Moon, Plus, Sun, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { CadCommand } from '../cad/CadCommandPalette';
-import { CadDrawingViewer } from '../cad/CadDrawingViewer';
+import { CadDrawingViewer, type CadExporter } from '../cad/CadDrawingViewer';
+import type { Bounds } from '../cad/cadGeometry';
 import type { CadMeasure, CadPoint } from '../cad/cadMeasure';
 import type { CadMeasureMode, CadTool } from '../cad/useCadCanvas';
 import type { ViewerTheme } from '../cad/platform';
 import type { DrawingDoc, DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
-import { TRIAL_URL, WORKSPACE_LOGIN_URL } from './content';
-import { exportPng, type PngRegion } from './exportDrawing';
+import { TRIAL_URL, WORKSPACE_SIGNUP_URL } from './content';
+import { exportSheetPng, type PngRegion } from './exportDrawing';
+import { ExportDialog, type ExportArea } from './ExportDialog';
+import type { SheetLayout } from './exportSheet';
 import { PngAreaPick } from './PngAreaPick';
 import styles from './site.module.css';
 import { openDrawingPicker } from './pickDrawing';
@@ -30,7 +33,7 @@ type Props = {
 
 type ExportKind = 'png' | 'pdf';
 const EXPORTS: Array<{ key: ExportKind; label: string }> = [
-  { key: 'png', label: 'PNG image (choose an area)' },
+  { key: 'png', label: 'PNG image (paper and scale)' },
   { key: 'pdf', label: 'PDF (whole sheet, A3)' },
 ];
 const icon = { size: 16, strokeWidth: 1.75 } as const;
@@ -112,7 +115,21 @@ export function ViewerScreen(props: Props) {
       return next;
     });
   const [signup, setSignup] = useState<SignupReason | null>(null);
-  const [pngCanvas, setPngCanvas] = useState<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    if (!signup) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSignup(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [signup]);
+  const exporterRef = useRef<CadExporter | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportArea, setExportArea] = useState<ExportArea>('view');
+  const [viewBounds, setViewBounds] = useState<Bounds | null>(null);
+  const [pickedBounds, setPickedBounds] = useState<Bounds | null>(null);
+  /** The drawing canvas while an area is being dragged out on it. */
+  const [picking, setPicking] = useState<HTMLCanvasElement | null>(null);
   const toolUses = useRef(0);
   const toolsLocked = useRef(false);
   const noteToolUse = () => {
@@ -137,35 +154,57 @@ export function ViewerScreen(props: Props) {
       const prev = current[sheetKey] ?? EMPTY_MARKS;
       return { ...current, [sheetKey]: typeof next === 'function' ? next(prev) : next };
     });
+  const closeExport = () => {
+    setExportOpen(false);
+    setPicking(null);
+  };
   const runExport = (kind: ExportKind) => {
     track('export_clicked', { kind });
     if (kind === 'pdf') {
-      setPngCanvas(null);
+      closeExport();
       setSignup('export');
       return;
     }
-    const canvas = stageRef.current?.querySelector('canvas');
-    if (!(canvas instanceof HTMLCanvasElement)) return;
     if (pngExportsUsed() >= FREE_PNG_EXPORTS) {
       setSignup('export');
       return;
     }
-    setPngCanvas(canvas);
+    setViewBounds(exporterRef.current?.visibleBounds() ?? null);
+    setExportOpen(true);
   };
-  const downloadPng = (region: PngRegion) => {
-    if (!pngCanvas) return;
+  const chooseArea = () => {
+    const canvas = stageRef.current?.querySelector('canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    setExportOpen(false);
+    setPicking(canvas);
+  };
+  const usePickedArea = (region: PngRegion) => {
+    const bounds = exporterRef.current?.screenRectBounds(region) ?? null;
+    if (bounds) {
+      setPickedBounds(bounds);
+      setExportArea('picked');
+    }
+    setPicking(null);
+    setExportOpen(true);
+  };
+  const downloadPng = (layout: SheetLayout) => {
+    const exporter = exporterRef.current;
+    if (!exporter) return;
     const used = pngExportsUsed();
     if (used >= FREE_PNG_EXPORTS) {
-      setPngCanvas(null);
+      closeExport();
       setSignup('export');
       return;
     }
     sessionStorage.setItem(PNG_EXPORT_KEY, String(used + 1));
-    void exportPng(pngCanvas, stem, region);
-    setPngCanvas(null);
+    track('export_png', { orientation: layout.width > layout.height ? 'landscape' : 'portrait', dpi: Math.round(layout.dpi), area: exportArea });
+    void exportSheetPng(exporter, layout, stem);
+    closeExport();
   };
   useEffect(() => {
-    setPngCanvas(null);
+    closeExport();
+    setPickedBounds(null);
+    setExportArea('view');
   }, [sheetKey]);
   const commands: CadCommand[] = [
     ...EXPORTS.map(({ key, label }) => ({ label: `Export ${label}`, run: () => runExport(key) })),
@@ -313,6 +352,7 @@ export function ViewerScreen(props: Props) {
           onToolUsed={noteToolUse}
           onMeasureMode={setMeasureMode}
           onMarks={setMarks}
+          exporterRef={exporterRef}
           onCalibrate={doc.info.format === 'PDF' ? (metersPerUnit) => props.onScale(docIndex, sheetIndex, metersPerUnit) : undefined}
         />
         {loading && (
@@ -326,7 +366,28 @@ export function ViewerScreen(props: Props) {
           </div>
         )}
       </motion.div>
-      {pngCanvas && <PngAreaPick canvas={pngCanvas} onDownload={downloadPng} onCancel={() => setPngCanvas(null)} />}
+      <ExportDialog
+        open={exportOpen}
+        exporter={exporterRef.current}
+        stem={stem}
+        viewBounds={viewBounds}
+        picked={pickedBounds}
+        area={exportArea}
+        onArea={setExportArea}
+        onChooseArea={chooseArea}
+        onCancel={closeExport}
+        onDownload={downloadPng}
+      />
+      {picking && (
+        <PngAreaPick
+          canvas={picking}
+          onPick={usePickedArea}
+          onCancel={() => {
+            setPicking(null);
+            setExportOpen(true);
+          }}
+        />
+      )}
       {signup && (
         <div className={styles.gate} role="presentation" onClick={() => setSignup(null)}>
           <div
@@ -336,18 +397,36 @@ export function ViewerScreen(props: Props) {
             aria-labelledby="signup-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <button type="button" className={styles.gateClose} aria-label="Close" onClick={() => setSignup(null)}>
-              ×
-            </button>
-            <h2 id="signup-title">Sign up to SpatialSense</h2>
-            <p>
-              {signup === 'export'
-                ? 'Sign up to SpatialSense to export this drawing.'
-                : 'You have used the viewer tools. Sign up to SpatialSense to keep using them.'}
-            </p>
-            <a className={styles.pill} href={WORKSPACE_LOGIN_URL}>
-              Sign up
-            </a>
+            <div className={styles.gateHero}>
+              <img src="/signup-cranes.jpg" alt="" />
+              <button type="button" className={styles.gateClose} aria-label="Close" onClick={() => setSignup(null)}>
+                <X size={16} strokeWidth={2.25} />
+              </button>
+            </div>
+            <form
+              className={styles.gateBody}
+              onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                event.preventDefault();
+                track('trial_clicked', { where: signup === 'export' ? 'signup_export' : 'signup_tools' });
+                location.assign(WORKSPACE_SIGNUP_URL);
+              }}
+            >
+              <h2 id="signup-title">You've only seen part of it</h2>
+              <p>Try free for 30 days. Compare drawings with BIM, track progress and share with your team.</p>
+              <label htmlFor="signup-email">Work email</label>
+              <input
+                id="signup-email"
+                name="email"
+                type="email"
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="name@company.com"
+              />
+              <button type="submit" className={styles.gateSubmit}>
+                Sign up
+              </button>
+            </form>
           </div>
         </div>
       )}

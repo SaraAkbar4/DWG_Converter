@@ -4,6 +4,9 @@ import { SPATIAL_SENSE_LOGO_ASPECT, SPATIAL_SENSE_LOGO_SVG } from './spatialSens
 const HEADER_LOGO = SPATIAL_SENSE_LOGO_SVG.replaceAll('fill="#FFFFFF"', 'fill="#14181F"');
 const FOOTER_LOGO = KODIFLY_FOOTER_LOGO_SVG.replaceAll('fill-opacity="0.45"', 'fill-opacity="0.92"');
 
+/** Image edge, in pixels, at which the header and footer are drawn at their design size. */
+const FRAME_BASE_EDGE = 1200;
+
 const PAPER = '#f8fafc';
 const ACCENT = '#1e80e8';
 const RULE = '#d1d5db';
@@ -32,19 +35,32 @@ function fitLabel(context: CanvasRenderingContext2D, label: string, maxWidth: nu
   return text.length > 1 ? `${text}…` : '';
 }
 
-/** Puts the cropped view between a SpatialSense header and a Kodifly footer. */
-export async function frameExportPng(source: HTMLCanvasElement, label: string): Promise<HTMLCanvasElement> {
-  const [header, footer] = await loadLogos();
-  const scale = Math.min(2.4, Math.max(0.9, Math.max(source.width, source.height) / 1200));
-  const margin = Math.round(28 * scale);
+/** How large the header and footer are drawn for an image whose longer edge is `longEdge` pixels. */
+/**
+ * How large the header and footer are drawn for an image whose longer edge is `longEdge` pixels.
+ * Proportional with no cap, so the branding takes the same share of the image at any size.
+ */
+export const frameScaleFor = (longEdge: number) => longEdge / FRAME_BASE_EDGE;
+
+/** Heights in pixels of the header and footer bands at a frame scale. */
+export function frameBands(scale: number) {
   const pad = Math.round(16 * scale);
-  const accentH = Math.max(4, Math.round(6 * scale));
+  const accentH = Math.max(1, Math.round(6 * scale));
   const logoH = Math.round(30 * scale);
-  const logoW = logoH * SPATIAL_SENSE_LOGO_ASPECT;
   const logoY = pad;
   const accentY = logoY + logoH + Math.round(12 * scale);
-  const headerH = accentY + accentH + pad;
-  const footerH = Math.round(72 * scale);
+  return { pad, accentH, logoH, logoY, accentY, headerH: accentY + accentH + pad, footerH: Math.round(72 * scale) };
+}
+
+/**
+ * Puts the drawing between a SpatialSense header and a Kodifly footer. Pass `scale` to size the
+ * bands for a sheet planned in advance (so the framed image lands exactly on the paper size).
+ */
+export async function frameExportPng(source: HTMLCanvasElement, label: string, scale = frameScaleFor(Math.max(source.width, source.height))): Promise<HTMLCanvasElement> {
+  const [header, footer] = await loadLogos();
+  const margin = Math.round(28 * scale);
+  const { pad, accentH, logoH, logoY, accentY, headerH, footerH } = frameBands(scale);
+  const logoW = logoH * SPATIAL_SENSE_LOGO_ASPECT;
   const out = document.createElement('canvas');
   out.width = source.width;
   out.height = source.height + headerH + footerH;
