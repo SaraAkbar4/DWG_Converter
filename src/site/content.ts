@@ -1,6 +1,7 @@
 export const THEME_STORAGE_KEY = 'kodifly-theme';
 export const TRIAL_URL = 'https://www.spatialsense.app/free-trial';
 export const WORKSPACE_LOGIN_URL = 'https://workspace.spatialsense.app/auth/login';
+export const WORKSPACE_SIGNUP_URL = 'https://workspace.spatialsense.app/auth/signup';
 
 export const FAQ = [
   {
