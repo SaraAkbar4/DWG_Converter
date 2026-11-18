@@ -17,11 +17,11 @@ import type { CadScreenRect, CadView } from './cadView';
 import type { Bounds } from './cadGeometry';
 import { entityPath } from './drawCadScene';
 import { useViewerTheme, useViewerTranslate } from './platform';
-import { prepareCadScene } from './prepareCadScene';
+import { countLayersIn, prepareCadScene } from './prepareCadScene';
 import type { CadMeasure, CadPoint } from './cadMeasure';
 import { useCadCanvas, type CadMeasureMode, type CadTool } from './useCadCanvas';
 import { useCadLayerVisibility } from './useCadLayerVisibility';
-import type { CadDrawing, CadPanel, CadSelection, CadStyle } from './types';
+import type { CadDrawing, CadLayer, CadPanel, CadSelection, CadStyle } from './types';
 
 const PRINT_WEIGHT_PER_EXTENT = 0.0004;
 const PRINT_MIN_LINE_PX = 0.6;
@@ -58,8 +58,13 @@ export type CadExporter = {
   /** The whole drawing's extent, in drawing units. */
   bounds: Bounds;
   metersPerUnit: number | null;
-  /** The drawing through `view`, on white paper, `width` × `height` pixels. */
-  render: (view: CadView, width: number, height: number, dpr: number) => HTMLCanvasElement | null;
+  /** The drawing through `view`, on white paper, `width` × `height` pixels, without `hiddenLayers` (default: those hidden on screen). */
+  render: (view: CadView, width: number, height: number, dpr: number, hiddenLayers?: ReadonlySet<number>) => HTMLCanvasElement | null;
+  layers: CadLayer[];
+  /** Layers turned off on screen now. */
+  hiddenLayers: ReadonlySet<number>;
+  /** How many lines and texts of each layer lie in `area`, for layers with any. */
+  layersIn: (area: Bounds) => Map<number, number>;
   /** The part of the drawing on screen now. */
   visibleBounds: () => Bounds | null;
   /** The part of the drawing under a rectangle of the canvas, in CSS pixels. */
@@ -140,6 +145,9 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
       bounds: scene.bounds,
       metersPerUnit: drawing.meters_per_unit,
       render: renderSheet,
+      layers: drawing.layers,
+      hiddenLayers,
+      layersIn: (area) => countLayersIn(scene, area),
       visibleBounds,
       screenRectBounds,
     };
@@ -147,7 +155,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     return () => {
       if (exporterRef.current === exporter) exporterRef.current = null;
     };
-  }, [exporterRef, scene.bounds, drawing.meters_per_unit, renderSheet, visibleBounds, screenRectBounds]);
+  }, [exporterRef, scene, drawing.meters_per_unit, drawing.layers, hiddenLayers, renderSheet, visibleBounds, screenRectBounds]);
 
   const togglePanel = (next: Exclude<CadPanel, null>) =>
     setPanel((current) => {

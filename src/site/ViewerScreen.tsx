@@ -10,10 +10,10 @@ import type { CadMeasureMode, CadTool } from '../cad/useCadCanvas';
 import type { ViewerTheme } from '../cad/platform';
 import type { DrawingDoc, DrawingFailure, DrawingLoading } from '../convert/useDrawingFile';
 import { TRIAL_URL, WORKSPACE_SIGNUP_URL } from './content';
-import { exportSheetPng, type PngRegion } from './exportDrawing';
+import { exportSheetPng } from './exportDrawing';
 import { ExportDialog, type ExportArea } from './ExportDialog';
 import type { SheetLayout } from './exportSheet';
-import { PngAreaPick } from './PngAreaPick';
+import { LayerPickScreen } from './LayerPickScreen';
 import styles from './site.module.css';
 import { openDrawingPicker } from './pickDrawing';
 import { track } from './track';
@@ -128,8 +128,9 @@ export function ViewerScreen(props: Props) {
   const [exportArea, setExportArea] = useState<ExportArea>('view');
   const [viewBounds, setViewBounds] = useState<Bounds | null>(null);
   const [pickedBounds, setPickedBounds] = useState<Bounds | null>(null);
-  /** The drawing canvas while an area is being dragged out on it. */
-  const [picking, setPicking] = useState<HTMLCanvasElement | null>(null);
+  /** The layer step for a chosen area, and the layers left out of that export. */
+  const [choosingLayers, setChoosingLayers] = useState(false);
+  const [exportHidden, setExportHidden] = useState<Set<number> | null>(null);
   const toolUses = useRef(0);
   const toolsLocked = useRef(false);
   const noteToolUse = () => {
@@ -156,7 +157,7 @@ export function ViewerScreen(props: Props) {
     });
   const closeExport = () => {
     setExportOpen(false);
-    setPicking(null);
+    setChoosingLayers(false);
   };
   const runExport = (kind: ExportKind) => {
     track('export_clicked', { kind });
@@ -172,20 +173,19 @@ export function ViewerScreen(props: Props) {
     setViewBounds(exporterRef.current?.visibleBounds() ?? null);
     setExportOpen(true);
   };
-  const chooseArea = () => {
-    const canvas = stageRef.current?.querySelector('canvas');
-    if (!(canvas instanceof HTMLCanvasElement)) return;
+  /**
+   * "Choose layers": the view in the viewer goes straight to the layer step, then on to paper and
+   * scale. The layers start as they are on screen, or as last chosen.
+   */
+  const chooseLayers = () => {
+    const exporter = exporterRef.current;
+    const area = viewBounds ?? exporter?.bounds ?? null;
+    if (!exporter || !area) return;
+    setPickedBounds(area);
+    setExportArea('picked');
+    setExportHidden((current) => current ?? new Set(exporter.hiddenLayers));
     setExportOpen(false);
-    setPicking(canvas);
-  };
-  const usePickedArea = (region: PngRegion) => {
-    const bounds = exporterRef.current?.screenRectBounds(region) ?? null;
-    if (bounds) {
-      setPickedBounds(bounds);
-      setExportArea('picked');
-    }
-    setPicking(null);
-    setExportOpen(true);
+    setChoosingLayers(true);
   };
   const downloadPng = (layout: SheetLayout) => {
     const exporter = exporterRef.current;
@@ -198,11 +198,12 @@ export function ViewerScreen(props: Props) {
     }
     sessionStorage.setItem(PNG_EXPORT_KEY, String(used + 1));
     track('export_png', { orientation: layout.width > layout.height ? 'landscape' : 'portrait', dpi: Math.round(layout.dpi), area: exportArea });
-    void exportSheetPng(exporter, layout, stem);
+    void exportSheetPng(exporter, layout, stem, exportArea === 'picked' ? (exportHidden ?? undefined) : undefined);
     closeExport();
   };
   useEffect(() => {
     closeExport();
+    setExportHidden(null);
     setPickedBounds(null);
     setExportArea('view');
   }, [sheetKey]);
@@ -374,16 +375,32 @@ export function ViewerScreen(props: Props) {
         picked={pickedBounds}
         area={exportArea}
         onArea={setExportArea}
-        onChooseArea={chooseArea}
+        onChooseArea={chooseLayers}
         onCancel={closeExport}
         onDownload={downloadPng}
+        hiddenLayers={exportArea === 'picked' ? (exportHidden ?? undefined) : undefined}
+        onLayers={
+          exportArea === 'picked' && pickedBounds
+            ? () => {
+                setExportOpen(false);
+                setChoosingLayers(true);
+              }
+            : undefined
+        }
       />
-      {picking && (
-        <PngAreaPick
-          canvas={picking}
-          onPick={usePickedArea}
-          onCancel={() => {
-            setPicking(null);
+      {choosingLayers && exporterRef.current && pickedBounds && (
+        <LayerPickScreen
+          exporter={exporterRef.current}
+          area={pickedBounds}
+          hidden={exportHidden ?? exporterRef.current.hiddenLayers}
+          onHidden={setExportHidden}
+          onBack={() => {
+            setChoosingLayers(false);
+            setExportOpen(true);
+          }}
+          onCancel={closeExport}
+          onContinue={() => {
+            setChoosingLayers(false);
             setExportOpen(true);
           }}
         />

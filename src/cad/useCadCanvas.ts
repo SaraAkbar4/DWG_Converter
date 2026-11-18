@@ -208,7 +208,7 @@ export function useCadCanvas(options: Options) {
    * lines and labels are (2 draws them twice their on-screen width). Null before there is a scene.
    */
   const renderSheet = useCallback(
-    (view: CadView, width: number, height: number, dpr: number): HTMLCanvasElement | null => {
+    (view: CadView, width: number, height: number, dpr: number, hiddenLayers?: ReadonlySet<number>): HTMLCanvasElement | null => {
       if (!scene || width < 1 || height < 1) return null;
       const out = document.createElement('canvas');
       out.width = Math.round(width);
@@ -224,6 +224,8 @@ export function useCadCanvas(options: Options) {
         dpr,
         paper: PRINT_PAPER,
         showGrid: false,
+        // Export can leave out layers that are on screen, or bring back ones that are off.
+        hiddenLayers: hiddenLayers ?? current.hiddenLayers,
         // Text the screen hides as too small to read can still be read on paper.
         minTextPx: Math.min(current.minTextPx, EXPORT_MIN_TEXT_PX),
         hover: null,

@@ -88,3 +88,18 @@ export function prepareCadScene(drawing: CadDrawing): CadScene {
 
   return { ...base, drawing, entityBounds, batches, cells };
 }
+
+/** How many lines and texts of each layer lie at least partly in `area`, for layers with any. */
+export function countLayersIn(scene: Pick<CadScene, 'drawing' | 'entityBounds'>, area: Bounds): Map<number, number> {
+  const [minX, minY, maxX, maxY] = area;
+  const counts = new Map<number, number>();
+  const add = (layer: number) => counts.set(layer, (counts.get(layer) ?? 0) + 1);
+  scene.drawing.entities.forEach((entity, index) => {
+    const box = scene.entityBounds[index];
+    if (box && box[0] <= maxX && box[2] >= minX && box[1] <= maxY && box[3] >= minY) add(entity.l);
+  });
+  for (const text of scene.drawing.texts) {
+    if (text.x >= minX && text.x <= maxX && text.y >= minY && text.y <= maxY) add(text.l);
+  }
+  return counts;
+}

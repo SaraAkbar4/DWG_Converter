@@ -16,17 +16,14 @@ function download(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-/** CSS pixels on the on-screen canvas. */
-export type PngRegion = { x: number; y: number; width: number; height: number };
-
 /**
  * One sheet of paper with the area drawn on it, header and footer included, at `layout`'s size.
  *
  * Like a CAD plot (and ShareCAD's print), the area is drawn again from the drawing's geometry at
  * the sheet's resolution and scale, not copied from the screen.
  */
-export async function renderSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string) {
-  const body = exporter.render(layout.view, layout.body.width, layout.body.height, layout.dpr);
+export async function renderSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string, hiddenLayers?: ReadonlySet<number>) {
+  const body = exporter.render(layout.view, layout.body.width, layout.body.height, layout.dpr, hiddenLayers);
   if (!body) return null;
   const context = body.getContext('2d');
   if (context) {
@@ -43,8 +40,8 @@ export async function renderSheetPng(exporter: CadExporter, layout: SheetLayout,
 }
 
 /** The sheet as a PNG download. */
-export async function exportSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string) {
-  const sheet = await renderSheetPng(exporter, layout, stem);
+export async function exportSheetPng(exporter: CadExporter, layout: SheetLayout, stem: string, hiddenLayers?: ReadonlySet<number>) {
+  const sheet = await renderSheetPng(exporter, layout, stem, hiddenLayers);
   if (!sheet) return false;
   const blob = await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, 'image/png'));
   if (!blob) return false;

@@ -30,18 +30,22 @@ type Props = {
   stem: string;
   /** The part of the screen in view when the dialog opened. */
   viewBounds: Bounds | null;
-  /** The area chosen on the drawing, once there is one. */
+  /** The area used with chosen layers, once there is one. */
   picked: Bounds | null;
   area: ExportArea;
   onArea: (area: ExportArea) => void;
-  /** Hide the dialog and let the user drag out an area. */
+  /** Hide the dialog and open the layer step for the current view. */
   onChooseArea: () => void;
   onCancel: () => void;
   onDownload: (layout: SheetLayout) => void;
+  /** Layers left out of the export; by default those hidden on screen. */
+  hiddenLayers?: ReadonlySet<number>;
+  /** Back to choosing layers, when the area has them. */
+  onLayers?: () => void;
 };
 
 /** Paper, scale and area for a PNG, with a preview of the sheet, before it downloads. */
-export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, onArea, onChooseArea, onCancel, onDownload }: Props) {
+export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, onArea, onChooseArea, onCancel, onDownload, hiddenLayers, onLayers }: Props) {
   const [paper, setPaper] = useState<PaperName>('A4');
   const [orientation, setOrientation] = useState<Orientation>('landscape');
   const [scale, setScale] = useState<number | typeof FIT>(FIT);
@@ -72,7 +76,7 @@ export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, o
     let cancelled = false;
     const timer = window.setTimeout(() => {
       const small = scaleLayout(layout, PREVIEW_WIDTH / Math.max(layout.width, layout.height));
-      void renderSheetPng(exporter, small, stem).then((sheet) => {
+      void renderSheetPng(exporter, small, stem, hiddenLayers).then((sheet) => {
         if (!cancelled && sheet) setPreview(sheet.toDataURL('image/png'));
       });
     }, PREVIEW_DELAY_MS);
@@ -80,7 +84,7 @@ export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, o
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, exporter, layout, stem]);
+  }, [open, exporter, layout, stem, hiddenLayers]);
 
   const [short, long] = PAPER_MM[paper];
   const paperMm = orientation === 'landscape' ? `${long} × ${short} mm` : `${short} × ${long} mm`;
@@ -94,6 +98,11 @@ export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, o
       centered
       destroyOnHidden={false}
       footer={[
+        onLayers ? (
+          <Button key="layers" onClick={onLayers} style={{ float: 'left' }}>
+            Layers
+          </Button>
+        ) : null,
         <Button key="cancel" onClick={onCancel}>
           Cancel
         </Button>,
@@ -122,7 +131,7 @@ export function ExportDialog({ open, exporter, stem, viewBounds, picked, area, o
               <Radio value="view" disabled={!viewBounds}>
                 Current view
               </Radio>
-              <Radio value="picked">Area you choose</Radio>
+              <Radio value="picked">Choose layers</Radio>
             </Radio.Group>
           </fieldset>
 
