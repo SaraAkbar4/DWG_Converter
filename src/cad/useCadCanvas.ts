@@ -3,13 +3,13 @@ import { pickAt } from './cadPick';
 import { findSnap, lockAngle, type CadAngleLock, type CadSnapKind, type CadSnapSettings } from './cadSnap';
 import { gridStepUnits } from './cadUnits';
 import type { Bounds } from './cadGeometry';
-import type { CadPaper } from './cadPaper';
-import { centerOn, fitView, toWorld, zoomAt, type CadView } from './cadView';
+import { PRINT_PAPER, type CadPaper } from './cadPaper';
+import { arrowPanOffset, centerOn, fitView, panView, toWorld, zoomAt, type CadScreenRect, type CadView } from './cadView';
 import { emptyFrameCache, renderCadFrame } from './cadFrameCache';
-import type { CadHighlight, CadLineWeight } from './drawCadScene';
+import { drawCadBase, drawCadOverlays, type CadHighlight, type CadLineWeight } from './drawCadScene';
 import type { CadScene } from './prepareCadScene';
 import type { CadColorMode, CadSelection } from './types';
-import { measureLabel, type CadMeasure, type CadMeasureMode, type CadPoint } from './cadMeasure';
+import { measureLabel, measureReadout, type CadMeasure, type CadMeasureMode, type CadPoint } from './cadMeasure';
 
 const PICK_TOLERANCE_PX = 5;
 /** How close the cursor must come to a point, in CSS pixels, for a measurement to snap to it. */
@@ -18,6 +18,8 @@ const CLICK_SLOP_PX = 4;
 const WHEEL_ZOOM_RATE = 0.0015;
 const FLY_TO_SCREEN_FRACTION = 0.25;
 const SETTLE_MS = 150;
+/** Smallest text, in CSS pixels at the sheet's own scale, still drawn on an export. */
+const EXPORT_MIN_TEXT_PX = 1;
 
 export type { CadMeasureMode } from './cadMeasure';
 export type CadTool = 'select' | 'measure' | 'pan';
@@ -73,6 +75,10 @@ export function useCadCanvas(options: Options) {
   const [hover, setHover] = useState<CadSelection>(null);
   const [cursor, setCursor] = useState<CadCursor | null>(null);
   const [view, setView] = useState<CadView | null>(null);
+  // While the last arm of an angle is being placed, the cursor stands in for the third point,
+  // so its arc and value follow the pointer instead of appearing only after the click.
+  const livePoints: CadPoint[] =
+    tool === 'measure' && measureMode === 'angle' && draft.length === 2 && cursor ? [...draft, [cursor.x, cursor.y]] : draft;
   const draw = {
     colorMode,
     paper,
@@ -86,9 +92,18 @@ export function useCadCanvas(options: Options) {
     highlight,
     hover,
     measures: [
-      ...measures.map((item) => ({ ...item, label: scene ? measureLabel(item, scene.drawing) : null })),
+      ...measures.map((item) => ({
+        ...item,
+        label: scene ? measureLabel(item, scene.drawing) : null,
+        readout: scene ? measureReadout(item, scene.drawing) : null,
+      })),
       ...(draft.length
-        ? [{ mode: measureMode, points: draft, label: scene ? measureLabel({ mode: measureMode, points: draft }, scene.drawing) : null }]
+        ? [{
+            mode: measureMode,
+            points: livePoints,
+            label: scene ? measureLabel({ mode: measureMode, points: livePoints }, scene.drawing) : null,
+            readout: scene ? measureReadout({ mode: measureMode, points: livePoints }, scene.drawing) : null,
+          }]
         : []),
     ],
     measureMode,
@@ -164,6 +179,84 @@ export function useCadCanvas(options: Options) {
     },
     [requestRender],
   );
+
+  const panBy = useCallback(
+    (dx: number, dy: number) => {
+      const view = viewRef.current;
+      if (!view) return;
+      interactionAtRef.current = performance.now();
+      viewRef.current = panView(view, dx, dy);
+      requestRender();
+    },
+    [requestRender],
+  );
+
+  /** Pan one arrow-key step. `key` is a KeyboardEvent key such as "ArrowLeft". Shift moves farther. */
+  const panArrow = useCallback(
+    (key: string, fast = false) => {
+      const { width, height } = sizeRef.current;
+      const offset = arrowPanOffset(key, width, height, fast);
+      if (!offset) return;
+      panBy(offset.dx, offset.dy);
+    },
+    [panBy],
+  );
+
+  /**
+   * Draws the drawing through `view` onto a new canvas, on white paper like a plot: no grid,
+   * selection, hover or measuring cursor, but finished measurements stay. `dpr` sets how thick
+   * lines and labels are (2 draws them twice their on-screen width). Null before there is a scene.
+   */
+  const renderSheet = useCallback(
+    (view: CadView, width: number, height: number, dpr: number): HTMLCanvasElement | null => {
+      if (!scene || width < 1 || height < 1) return null;
+      const out = document.createElement('canvas');
+      out.width = Math.round(width);
+      out.height = Math.round(height);
+      const ctx = out.getContext('2d');
+      if (!ctx) return null;
+      const current = stateRef.current;
+      const state = {
+        ...current,
+        view,
+        width: out.width,
+        height: out.height,
+        dpr,
+        paper: PRINT_PAPER,
+        showGrid: false,
+        // Text the screen hides as too small to read can still be read on paper.
+        minTextPx: Math.min(current.minTextPx, EXPORT_MIN_TEXT_PX),
+        hover: null,
+        highlight: null,
+        pointer: null,
+        // Finished measurements only; the one still being clicked out is not part of the drawing.
+        measures: marksRef.current.measures.map((item) => ({
+          ...item,
+          label: measureLabel(item, scene.drawing),
+          readout: measureReadout(item, scene.drawing),
+        })),
+      };
+      drawCadBase(ctx, scene, state);
+      drawCadOverlays(ctx, scene, state);
+      return out;
+    },
+    [scene],
+  );
+
+  /** The part of the drawing a screen rectangle (CSS pixels on the canvas) covers. */
+  const screenRectBounds = useCallback((rect: CadScreenRect): Bounds | null => {
+    const view = viewRef.current;
+    if (!view || rect.width <= 0 || rect.height <= 0) return null;
+    const [x1, y1] = toWorld(view, rect.x, rect.y);
+    const [x2, y2] = toWorld(view, rect.x + rect.width, rect.y + rect.height);
+    return [Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2)];
+  }, []);
+
+  /** The part of the drawing on screen now. */
+  const visibleBounds = useCallback(() => {
+    const { width, height } = sizeRef.current;
+    return screenRectBounds({ x: 0, y: 0, width, height });
+  }, [screenRectBounds]);
 
   const flyTo = useCallback(
     (x: number, y: number, worldSize: number) => {
@@ -355,6 +448,10 @@ export function useCadCanvas(options: Options) {
         const landed = resolve(sx, sy, event.shiftKey);
         const point: CadPoint = [landed.x, landed.y];
         const [first] = points;
+        const previous = points.at(-1);
+        // A second click on the point just placed (easy to do with snapping on) would make an arm
+        // with no length, which has no angle; it is ignored rather than measured.
+        if (previous && points.length < MEASURE_POINTS[mode] && Math.hypot(point[0] - previous[0], point[1] - previous[1]) <= tolerance() * 0.2) return;
         if (mode === 'area' && first && points.length >= 3 && Math.hypot(point[0] - first[0], point[1] - first[1]) <= tolerance() * 2) {
           marksRef.current = { measures: [...marksRef.current.measures, { mode, points }], draft: [] };
           commit({ mode, points });
@@ -412,6 +509,17 @@ export function useCadCanvas(options: Options) {
       stateRef.current.onSelect(null);
       keepArea();
     };
+    const onArrowPan = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || !viewRef.current) return;
+      if (!arrowPanOffset(event.key, sizeRef.current.width, sizeRef.current.height, event.shiftKey)) return;
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        if (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+        if (target.closest('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      }
+      event.preventDefault();
+      panArrow(event.key, event.shiftKey);
+    };
 
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -423,7 +531,9 @@ export function useCadCanvas(options: Options) {
     canvas.addEventListener('contextmenu', onContextMenu);
     window.addEventListener('keydown', onShift);
     window.addEventListener('keyup', onShift);
+    window.addEventListener('keydown', onArrowPan);
     return () => {
+      window.removeEventListener('keydown', onArrowPan);
       window.removeEventListener('keydown', onShift);
       window.removeEventListener('keyup', onShift);
       canvas.removeEventListener('contextmenu', onContextMenu);
@@ -441,7 +551,7 @@ export function useCadCanvas(options: Options) {
       cacheRef.current = emptyFrameCache();
       sizeRef.current = { width: 0, height: 0 };
     };
-  }, [scene, fit, requestRender]);
+  }, [scene, fit, panArrow, requestRender]);
 
   return {
     canvasRef,
@@ -450,7 +560,11 @@ export function useCadCanvas(options: Options) {
     viewScale: view?.scale ?? 0,
     fit,
     zoomBy,
+    panArrow,
     flyTo,
     zoomToBounds,
+    renderSheet,
+    screenRectBounds,
+    visibleBounds,
   };
 }

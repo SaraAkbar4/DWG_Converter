@@ -48,3 +48,34 @@ export function centerOn(
 ): CadView {
   return { scale: view.scale, tx: width / 2 - x * view.scale, ty: height / 2 + y * view.scale };
 }
+
+/** Share of the shorter screen edge moved by one arrow press. Shift uses the larger step. */
+const ARROW_PAN_FRACTION = 0.15;
+const ARROW_PAN_FRACTION_FAST = 0.4;
+
+/** Screen shift for an arrow key. Positive x moves the drawing right, so the view looks left. */
+const ARROW_SIGN: Record<string, [number, number]> = {
+  ArrowLeft: [1, 0],
+  ArrowRight: [-1, 0],
+  ArrowUp: [0, 1],
+  ArrowDown: [0, -1],
+};
+
+export function arrowPanOffset(
+  key: string,
+  width: number,
+  height: number,
+  fast = false,
+): { dx: number; dy: number } | null {
+  const sign = ARROW_SIGN[key];
+  if (!sign || width <= 0 || height <= 0) return null;
+  const step = Math.min(width, height) * (fast ? ARROW_PAN_FRACTION_FAST : ARROW_PAN_FRACTION);
+  return { dx: sign[0] * step, dy: sign[1] * step };
+}
+
+export function panView(view: CadView, dx: number, dy: number): CadView {
+  return { scale: view.scale, tx: view.tx + dx, ty: view.ty + dy };
+}
+
+/** A screen rectangle, in the view's own (CSS) pixels. */
+export type CadScreenRect = { x: number; y: number; width: number; height: number };

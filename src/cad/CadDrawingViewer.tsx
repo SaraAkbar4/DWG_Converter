@@ -1,5 +1,5 @@
 import { theme } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { CadCommandPalette, type CadCommand } from './CadCommandPalette';
 import type { CadFindTarget } from './CadFindList';
 import styles from './cadFloorPlan.module.css';
@@ -13,6 +13,8 @@ import { CadSnapControls } from './CadSnapControls';
 import { DEFAULT_SNAP_SETTINGS, type CadAngleLock, type CadSnapSettings } from './cadSnap';
 import { CadToolbar } from './CadToolbar';
 import { CadViewRail } from './CadViewRail';
+import type { CadScreenRect, CadView } from './cadView';
+import type { Bounds } from './cadGeometry';
 import { entityPath } from './drawCadScene';
 import { useViewerTheme, useViewerTranslate } from './platform';
 import { prepareCadScene } from './prepareCadScene';
@@ -47,9 +49,24 @@ type Props = {
   onMarks: (marks: SheetMarks | ((current: SheetMarks) => SheetMarks)) => void;
   /** Present when the sheet's real-world scale can be set from a measured length (PDF plots). */
   onCalibrate?: (metersPerUnit: number) => void;
+  /** Filled with what an export needs to draw the drawing onto a sheet of paper. */
+  exporterRef?: MutableRefObject<CadExporter | null>;
 };
 
-export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onToolUsed, onMeasureMode, onMarks, onCalibrate }: Props) {
+/** Draws the open drawing for export, and reads which part of it an area covers. */
+export type CadExporter = {
+  /** The whole drawing's extent, in drawing units. */
+  bounds: Bounds;
+  metersPerUnit: number | null;
+  /** The drawing through `view`, on white paper, `width` × `height` pixels. */
+  render: (view: CadView, width: number, height: number, dpr: number) => HTMLCanvasElement | null;
+  /** The part of the drawing on screen now. */
+  visibleBounds: () => Bounds | null;
+  /** The part of the drawing under a rectangle of the canvas, in CSS pixels. */
+  screenRectBounds: (rect: CadScreenRect) => Bounds | null;
+};
+
+export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, marks, railOpen, onRailClose, onTool, onToolUsed, onMeasureMode, onMarks, onCalibrate, exporterRef }: Props) {
   const t = useViewerTranslate();
   const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
@@ -116,6 +133,22 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     angleLock,
   });
 
+  const { renderSheet, visibleBounds, screenRectBounds } = canvas;
+  useEffect(() => {
+    if (!exporterRef) return;
+    const exporter: CadExporter = {
+      bounds: scene.bounds,
+      metersPerUnit: drawing.meters_per_unit,
+      render: renderSheet,
+      visibleBounds,
+      screenRectBounds,
+    };
+    exporterRef.current = exporter;
+    return () => {
+      if (exporterRef.current === exporter) exporterRef.current = null;
+    };
+  }, [exporterRef, scene.bounds, drawing.meters_per_unit, renderSheet, visibleBounds, screenRectBounds]);
+
   const togglePanel = (next: Exclude<CadPanel, null>) =>
     setPanel((current) => {
       if (current === next) return null;
@@ -146,6 +179,10 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
     { label: 'Fit drawing to screen', shortcut: 'F', run: canvas.fit },
     { label: 'Zoom in', shortcut: '+', run: () => canvas.zoomBy(ZOOM_STEP) },
     { label: 'Zoom out', shortcut: '-', run: () => canvas.zoomBy(1 / ZOOM_STEP) },
+    { label: 'Pan left', shortcut: '←', run: () => canvas.panArrow('ArrowLeft') },
+    { label: 'Pan right', shortcut: '→', run: () => canvas.panArrow('ArrowRight') },
+    { label: 'Pan up', shortcut: '↑', run: () => canvas.panArrow('ArrowUp') },
+    { label: 'Pan down', shortcut: '↓', run: () => canvas.panArrow('ArrowDown') },
     { label: 'Measure distance', shortcut: 'M', run: () => (tool === 'measure' ? stopMeasure() : startMeasure('distance')) },
     { label: 'Measure area', shortcut: 'R', run: () => startMeasure('area') },
     { label: 'Measure angle', shortcut: 'G', run: () => startMeasure('angle') },
@@ -221,6 +258,7 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
           ref={canvas.canvasRef}
           tabIndex={0}
           role="img"
+          aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
           aria-label={t('viewer3d.cadFloorPlan.canvasLabel', 'Vector drawing')}
           style={{ display: 'block', touchAction: 'none' }}
         />
@@ -250,7 +288,11 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         selection={selection}
         group={group}
         tool={tool}
-        measure={marks.draft}
+        measure={
+          tool === 'measure' && measureMode === 'angle' && marks.draft.length === 2 && canvas.cursor
+            ? [...marks.draft, [canvas.cursor.x, canvas.cursor.y]]
+            : marks.draft
+        }
         saved={marks.saved}
         measureMode={measureMode}
         onCalibrate={onCalibrate}
@@ -266,7 +308,6 @@ export function CadDrawingViewer({ drawing, extraCommands, tool, measureMode, ma
         }}
         avoidRef={statusRef}
         onClearSelection={() => setSelection(null)}
-        onExitMeasure={stopMeasure}
         snapControls={
           <CadSnapControls
             settings={snapSettings}
