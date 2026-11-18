@@ -139,13 +139,13 @@
 }
 
 .potree-toolbar-horizontal-item.is-active .potree-toolbar-horizontal-trigger {
-  background: var(--tool-active, var(--primary, #2459d8));
-  color: #fff;
+  background: var(--tool-active, #0d4799);
+  color: var(--tool-active-color, #f0f5ff);
 }
 
 .potree-toolbar-horizontal-item.is-active .potree-toolbar-horizontal-trigger:hover:not(:disabled) {
-  background: var(--tool-active-hover, var(--primary-bright, #3d6fe8));
-  color: #fff;
+  background: var(--tool-active-hover, #0a3a7d);
+  color: var(--tool-active-color, #f0f5ff);
 }
 
 .potree-toolbar-tip {
@@ -324,19 +324,25 @@
 }
 
 [data-viewer-theme='dark'] .potree-toolbar-horizontal-item.is-active .potree-toolbar-horizontal-trigger {
-  color: #fff;
+  color: var(--tool-active-color, #f0f5ff);
 }
 
 [data-viewer-theme='dark'] .potree-toolbar-horizontal-submenu-item {
-  color: var(--viewer-chrome-color, rgba(255, 255, 255, 0.88));
+  color: var(--viewer-chrome-color, #f0f5ff);
 }
 
 [data-viewer-theme='dark'] .potree-toolbar-horizontal-submenu-group-label {
-  color: var(--viewer-chrome-color-secondary, rgba(255, 255, 255, 0.45));
+  color: var(--viewer-chrome-color-secondary, rgba(240, 245, 255, 0.72));
 }
 
 [data-viewer-theme='dark'] .potree-toolbar-horizontal-submenu-item.is-selected {
-  color: var(--viewer-chrome-active-color, #1677ff);
+  color: var(--viewer-chrome-active-color, #f0f5ff);
+}
+
+.potree-toolbar-submenu-popup {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .potree-toolbar-horizontal-submenu-item {
@@ -344,12 +350,13 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 14px;
+  padding: 10px 12px;
   border: none;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  color: var(--viewer-chrome-color, rgba(0, 0, 0, 0.88));
+  color: var(--viewer-chrome-color, #f0f5ff);
   transition: background-color 0.15s ease;
 }
 
@@ -365,13 +372,14 @@
   user-select: none;
 }
 
-.potree-toolbar-horizontal-submenu-item:hover:not(:disabled) {
-  background: var(--viewer-chrome-hover-bg, rgba(0, 0, 0, 0.04));
+.potree-toolbar-horizontal-submenu-item:hover:not(:disabled):not(.is-selected) {
+  background: var(--viewer-chrome-hover-bg, rgba(240, 245, 255, 0.08));
 }
 
-.potree-toolbar-horizontal-submenu-item.is-selected {
-  background: var(--viewer-chrome-active-bg, #e6f4ff);
-  color: var(--viewer-chrome-active-color, #1677ff);
+.potree-toolbar-horizontal-submenu-item.is-selected,
+.potree-toolbar-horizontal-submenu-item.is-selected:hover:not(:disabled) {
+  background: var(--viewer-chrome-active-bg, #0d4799);
+  color: var(--viewer-chrome-active-color, #f0f5ff);
 }
 
 .potree-toolbar-horizontal-submenu-item:disabled {
@@ -398,17 +406,17 @@
 }
 
 .potree-toolbar-horizontal-submenu-item.is-selected img.potree-toolbar-horizontal-submenu-icon {
-  filter: brightness(0) saturate(100%) invert(32%) sepia(89%) saturate(1945%) hue-rotate(203deg)
-    brightness(97%) contrast(101%);
+  filter: none;
 }
 
 .potree-toolbar-horizontal-submenu-label {
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1.3;
   white-space: nowrap;
+  color: inherit;
 }
 
 .potree-toolbar-horizontal-submenu-check {

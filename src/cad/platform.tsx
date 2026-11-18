@@ -1,5 +1,4 @@
 /** Stand-ins for the kodifly-platform packages the copied CAD viewer imports. */
-import type { GlobalToken } from 'antd';
 import { X } from 'lucide-react';
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import styles from './cadFloorPlan.module.css';
@@ -15,22 +14,26 @@ export const useViewerTranslate = () => translate;
 
 export const CLIP_SAFE_BOTTOM = 16;
 
-export function getToolbarSubmenuStyle(token: GlobalToken): CSSProperties {
+/** High-contrast menu: dark surface, deep blue selection, light text and icons. */
+export function getToolbarSubmenuStyle(): CSSProperties {
   return {
-    background: token.colorBgElevated,
-    borderRadius: 12,
-    boxShadow: token.boxShadowSecondary,
+    background: '#171717',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.38)',
     display: 'flex',
     flexDirection: 'column',
-    padding: '6px 0',
+    gap: 2,
+    padding: 6,
     width: 'max-content',
-    color: token.colorText,
-    ['--viewer-chrome-bg' as string]: token.colorBgElevated,
-    ['--viewer-chrome-color' as string]: token.colorText,
-    ['--viewer-chrome-color-secondary' as string]: token.colorTextSecondary,
-    ['--viewer-chrome-hover-bg' as string]: token.colorFillSecondary,
-    ['--viewer-chrome-active-bg' as string]: token.colorPrimaryBg,
-    ['--viewer-chrome-active-color' as string]: token.colorPrimary,
+    minWidth: 156,
+    color: '#F0F5FF',
+    ['--viewer-chrome-bg' as string]: '#171717',
+    ['--viewer-chrome-color' as string]: '#F0F5FF',
+    ['--viewer-chrome-color-secondary' as string]: 'rgba(240, 245, 255, 0.72)',
+    ['--viewer-chrome-hover-bg' as string]: 'rgba(240, 245, 255, 0.08)',
+    ['--viewer-chrome-active-bg' as string]: '#0D4799',
+    ['--viewer-chrome-active-color' as string]: '#F0F5FF',
   };
 }
 

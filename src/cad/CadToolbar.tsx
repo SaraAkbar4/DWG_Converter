@@ -1,5 +1,4 @@
 import { useViewerTranslate } from './platform';
-import { theme } from 'antd';
 import {
   Boxes,
   DraftingCompass,
@@ -33,8 +32,8 @@ type Props = {
 
 export function CadToolbar(props: Props) {
   const t = useViewerTranslate();
-  const { token } = theme.useToken();
   const [compact, setCompact] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'select' | 'measure' | null>(null);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 768px)');
     const apply = () => setCompact(query.matches);
@@ -43,8 +42,9 @@ export function CadToolbar(props: Props) {
     return () => query.removeEventListener('change', apply);
   }, []);
   const accent = {
-    '--tool-active': token.colorPrimary,
-    '--tool-active-hover': token.colorPrimaryHover,
+    '--tool-active': '#0D4799',
+    '--tool-active-hover': '#0A3A7D',
+    '--tool-active-color': '#F0F5FF',
   } as CSSProperties;
 
   const selectModes: CadMenuOption<CadSelectMode>[] = [
@@ -85,6 +85,8 @@ export function CadToolbar(props: Props) {
           active={props.tool === 'select'}
           onDeactivate={props.onDeactivateSelect}
           menu={{ options: selectModes, value: props.selectMode, onSelect: props.onSelectMode }}
+          menuOpen={openMenu === 'select'}
+          onMenuOpenChange={(open) => setOpenMenu(open ? 'select' : null)}
         />
         <CadToolbarItem
           label={t('viewer3d.cadFloorPlan.measureShort', 'Measure')}
@@ -93,6 +95,8 @@ export function CadToolbar(props: Props) {
           active={props.tool === 'measure'}
           onDeactivate={props.onDeactivateMeasure}
           menu={{ options: measureModes, value: props.measureMode, onSelect: props.onMeasure }}
+          menuOpen={openMenu === 'measure'}
+          onMenuOpenChange={(open) => setOpenMenu(open ? 'measure' : null)}
         />
         <span className="potree-toolbar-horizontal-divider" />
         <CadToolbarItem

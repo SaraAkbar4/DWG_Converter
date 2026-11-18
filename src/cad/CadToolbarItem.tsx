@@ -1,5 +1,5 @@
 import { CheckOutlined } from '@ant-design/icons';
-import { Dropdown, theme } from 'antd';
+import { Dropdown } from 'antd';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { getToolbarSubmenuStyle, useViewerTheme } from './platform';
@@ -20,6 +20,9 @@ type Props<T extends string> = {
   /** Turns this tool off when its button is clicked while it is already on. */
   onDeactivate?: () => void;
   menu?: { options: CadMenuOption<T>[]; value: T; onSelect: (value: T) => void };
+  /** When set, the parent decides whether this menu is open so only one menu stays open. */
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 };
 
 export function CadToolbarItem<T extends string>({
@@ -30,12 +33,19 @@ export function CadToolbarItem<T extends string>({
   onClick,
   onDeactivate,
   menu,
+  menuOpen,
+  onMenuOpenChange,
 }: Props<T>) {
-  const { token } = theme.useToken();
   const viewerTheme = useViewerTheme();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = menuOpen ?? uncontrolledOpen;
+  const setOpen = (value: boolean | ((current: boolean) => boolean)) => {
+    const next = typeof value === 'function' ? value(open) : value;
+    if (onMenuOpenChange) onMenuOpenChange(next);
+    else setUncontrolledOpen(next);
+  };
   const chevronRef = useRef<HTMLSpanElement>(null);
-  const submenuStyle = useMemo(() => getToolbarSubmenuStyle(token), [token]);
+  const submenuStyle = useMemo(() => getToolbarSubmenuStyle(), []);
   const chevron = open ? (
     <ChevronUp size={10} strokeWidth={2.75} className="potree-toolbar-horizontal-chevron" />
   ) : (
@@ -136,6 +146,7 @@ export function CadToolbarItem<T extends string>({
           open={open}
           placement="bottom"
           destroyOnHidden
+          overlayClassName="potree-toolbar-submenu-popup"
           onOpenChange={setOpen}
           popupRender={() => submenu}
         >
